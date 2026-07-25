@@ -376,6 +376,234 @@ body {
     border-radius: 22px;
 }
 
+/* === 数独增强 === */
+.sudoku-info {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.timer-display {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+}
+
+.timer-display.running {
+    color: var(--primary);
+}
+
+.hint-count {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.btn-accent {
+    background: linear-gradient(135deg, #f093fb, #f5af19);
+    color: #fff;
+    border: none;
+}
+
+.btn-accent:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+}
+
+.btn-sm {
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    border-radius: 16px;
+}
+
+.btn-draft {
+    background: transparent;
+    color: var(--text-light);
+    border: 1.5px solid var(--border);
+    transition: all var(--transition);
+}
+
+.btn-draft:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.btn-draft.active {
+    background: #fff3cd;
+    color: #856404;
+    border-color: #ffc107;
+}
+
+/* 草稿数字 */
+.sudoku-cell .draft-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 100%;
+    height: 100%;
+    padding: 1px;
+}
+
+.sudoku-cell .draft-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.45rem;
+    font-weight: 500;
+    color: #888;
+    line-height: 1;
+}
+
+/* === 统计弹窗 === */
+.stats-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+}
+
+.stats-modal.open {
+    display: flex;
+}
+
+.stats-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+}
+
+.stats-panel {
+    position: relative;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 28px;
+    width: 90%;
+    max-width: 420px;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 1;
+    animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stats-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.stats-header h3 {
+    font-size: 1.2rem;
+}
+
+.stats-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    transition: var(--transition);
+}
+
+.stats-close-btn:hover {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 12px 6px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-light);
+    margin-top: 2px;
+}
+
+.stats-panel h4 {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
+.stats-history {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stats-empty {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 0.85rem;
+    padding: 20px;
+}
+
+.stat-record {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    font-size: 0.82rem;
+}
+
+.stat-record .rec-date {
+    color: var(--text-light);
+}
+
+.stat-record .rec-time {
+    font-weight: 700;
+    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+    color: var(--primary);
+}
+
+.stat-record .rec-diff {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--border);
+}
+
 /* === 围棋 === */
 .go-board-wrapper {
     background: var(--bg-card);
