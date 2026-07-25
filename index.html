@@ -134,18 +134,23 @@
                         </div>
                     </div>
 
-                    <!-- 残局练习面板 -->
+                    <!-- 残局练习面板（教程模式） -->
                     <div class="go-sub-panel active" id="goPanelPractice">
+                        <!-- 章节选择 -->
+                        <div class="chapter-tabs" id="chapterTabs"></div>
+                        <!-- 课时选择 -->
+                        <div class="lesson-tabs" id="lessonTabs"></div>
+                        <!-- 教学文案 -->
+                        <div class="teaching-box" id="teachingBox" style="display:none">
+                            <div class="teaching-text" id="teachingText"></div>
+                        </div>
+                        <!-- 题目信息 -->
                         <div class="practice-header">
-                            <div class="practice-category-tabs" id="practiceCategoryTabs">
-                                <button class="btn btn-sm category-tab active" data-cat="all">全部</button>
-                                <button class="btn btn-sm category-tab" data-cat="一步题">一步题</button>
-                                <button class="btn btn-sm category-tab" data-cat="多步题">多步题</button>
-                            </div>
-                            <span class="practice-title" id="practiceTitle">题目 1/12</span>
+                            <span class="practice-title" id="practiceTitle">题目 1/3</span>
                             <span class="practice-desc" id="practiceDesc">黑先，请吃掉白棋</span>
                             <div class="practice-nav">
                                 <button class="btn btn-sm btn-outline" id="goPrevPuzzle">◀ 上一题</button>
+                                <span class="practice-progress" id="practiceProgress">1/3</span>
                                 <button class="btn btn-sm btn-outline" id="goNextPuzzle">下一题 ▶</button>
                                 <button class="btn btn-sm btn-outline" id="goResetPuzzle">🔄 重置</button>
                             </div>

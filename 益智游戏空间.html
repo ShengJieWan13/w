@@ -762,6 +762,67 @@ body {
     border-color: var(--primary);
 }
 
+/* 章节 & 课时选择 */
+.chapter-tabs, .lesson-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+}
+
+.chapter-tab, .lesson-tab {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1.5px solid var(--border);
+    background: var(--bg-card);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    color: var(--text-light);
+}
+
+.chapter-tab.active, .lesson-tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.chapter-tab:hover:not(.active), .lesson-tab:hover:not(.active) {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.lesson-tab.done { border-color: #27ae60; color: #27ae60; }
+.lesson-tab.done::after { content: ' ✓'; }
+
+/* 教学文案 */
+.teaching-box {
+    width: 100%;
+    max-width: 540px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: #92400e;
+}
+
+.teaching-text strong {
+    color: #b45309;
+    font-size: 0.95rem;
+}
+
+.practice-progress {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    min-width: 32px;
+    text-align: center;
+}
+
 .practice-result {
     font-size: 1rem;
     font-weight: 700;
@@ -1206,18 +1267,23 @@ body {
                         </div>
                     </div>
 
-                    <!-- 残局练习面板 -->
+                    <!-- 残局练习面板（教程模式） -->
                     <div class="go-sub-panel active" id="goPanelPractice">
+                        <!-- 章节选择 -->
+                        <div class="chapter-tabs" id="chapterTabs"></div>
+                        <!-- 课时选择 -->
+                        <div class="lesson-tabs" id="lessonTabs"></div>
+                        <!-- 教学文案 -->
+                        <div class="teaching-box" id="teachingBox" style="display:none">
+                            <div class="teaching-text" id="teachingText"></div>
+                        </div>
+                        <!-- 题目信息 -->
                         <div class="practice-header">
-                            <div class="practice-category-tabs" id="practiceCategoryTabs">
-                                <button class="btn btn-sm category-tab active" data-cat="all">全部</button>
-                                <button class="btn btn-sm category-tab" data-cat="一步题">一步题</button>
-                                <button class="btn btn-sm category-tab" data-cat="多步题">多步题</button>
-                            </div>
-                            <span class="practice-title" id="practiceTitle">题目 1/12</span>
+                            <span class="practice-title" id="practiceTitle">题目 1/3</span>
                             <span class="practice-desc" id="practiceDesc">黑先，请吃掉白棋</span>
                             <div class="practice-nav">
                                 <button class="btn btn-sm btn-outline" id="goPrevPuzzle">◀ 上一题</button>
+                                <span class="practice-progress" id="practiceProgress">1/3</span>
                                 <button class="btn btn-sm btn-outline" id="goNextPuzzle">下一题 ▶</button>
                                 <button class="btn btn-sm btn-outline" id="goResetPuzzle">🔄 重置</button>
                             </div>
@@ -1998,158 +2064,68 @@ class SudokuGame {
  * 功能：残局练习、AI 对战（Monte Carlo）、胜率显示、AI 提示、双人对弈
  */
 
-// ==================== 残局题库（分类+解析） ====================
-const TSUMEKO_PROBLEMS = [
-    // === 一步题 ===
-    {
-        name: '第1题：双打吃',
-        desc: '黑先，一步同时打吃两块白棋',
-        category: '一步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[3,2],[3,4],[4,3],[5,2],[5,5]],
-            white: [[3,3],[4,2],[4,5],[5,3],[5,4]]
-        },
-        answer: [4, 4],
-        explanation: '黑1落于(4,4)，同时打吃上方(4,5)和左边(4,2)两块白棋。白方无法同时救回两边，必死一块。双打吃是围棋最基本的吃子技巧之一。'
-    },
-    {
-        name: '第2题：征子',
-        desc: '黑先，用征子（扭羊头）吃白棋',
-        category: '一步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[3,3],[4,4],[5,2],[5,5]],
-            white: [[3,4],[4,3],[4,5],[5,4]]
-        },
-        answer: [3, 5],
-        explanation: '黑1打吃(3,5)，白棋只能逃向(2,5)，之后黑棋步步紧逼将白棋逼到棋盘边缘全部吃掉。注意：征子前需确认征子路径上没有对方的接应棋子（征子有利）。'
-    },
-    {
-        name: '第3题：做活',
-        desc: '黑先，做两只眼活棋',
-        category: '一步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[2,2],[2,5],[3,2],[3,4],[3,5],[4,3]],
-            white: [[1,2],[1,5],[2,1],[2,6],[3,1],[3,6],[4,2],[4,4],[4,5]]
-        },
-        answer: [2, 3],
-        explanation: '黑1落于(2,3)，将左右两块黑棋连接起来，同时形成两只完整的眼位（左侧和右侧各一只）。两块黑棋连通后白方无法分断，黑棋净活。'
-    },
-    {
-        name: '第4题：扑杀',
-        desc: '黑先，用扑破坏白棋眼位',
-        category: '一步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[1,3],[2,1],[2,5],[3,2],[3,4],[4,3]],
-            white: [[2,2],[2,3],[2,4],[3,3]]
-        },
-        answer: [1, 2],
-        explanation: '黑1扑入(1,2)是妙手！白棋提掉黑1后自紧一气，眼位被破坏。这是经典的"扑杀"手筋——故意送一子让对方提掉，反而缩小对方眼位，最终白棋因眼位不足而死。'
-    },
-    {
-        name: '第5题：接不归',
-        desc: '黑先，利用接不归吃白',
-        category: '一步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[2,2],[2,4],[3,1],[3,3],[4,2]],
-            white: [[2,3],[3,2],[4,1],[4,3]]
-        },
-        answer: [2, 1],
-        explanation: '黑1断打(2,1)！白棋右边三子(2,3)(3,2)(4,1)被打吃，而白棋试图连接时黑棋可顺势提掉。白棋气紧无法接回，形成"接不归"——想接却接不回去。'
-    },
-    {
-        name: '第6题：倒扑',
-        desc: '黑先，送一子然后倒扑吃白',
-        category: '一步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[1,2],[2,1],[2,4],[3,3],[4,2]],
-            white: [[2,2],[2,3],[3,2],[3,4],[4,3]]
-        },
-        answer: [1, 3],
-        explanation: '黑1送吃(1,3)是倒扑手筋！白棋提掉这枚黑子后，黑棋立刻在原位回提，反而吃掉白棋(2,3)(2,2)等数子。倒扑的精髓在于"先舍后得"。'
-    },
-    {
-        name: '第7题：枷吃',
-        desc: '黑先，用枷吃（虚枷）吃白',
-        category: '一步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[3,1],[3,5],[4,3],[5,2],[5,4]],
-            white: [[3,3],[4,2],[4,4]]
-        },
-        answer: [3, 2],
-        explanation: '黑1虚枷(3,2)！虽然没有直接打吃白棋，但将白棋(3,3)和(4,2)两块弱棋罩在网中。白棋无论从哪个方向逃都会撞到黑棋的包围圈，这是典型的"枷吃"（也叫虚枷、罩吃）。'
-    },
-    {
-        name: '第8题：角部做活',
-        desc: '黑先，在角上做活',
-        category: '一步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[0,1],[1,0],[1,2],[2,1]],
-            white: [[0,0],[0,2],[1,1],[2,0]]
-        },
-        answer: [2, 2],
-        explanation: '黑1占据(2,2)是角部做活的要点！这一步同时扩张了黑棋的眼位空间，在角上形成了两只确定无疑的眼。角部死活中，"二·2"位置常常是做活的关键。'
-    },
-    // === 多步题 ===
-    {
-        name: '第9题：边上对杀',
-        desc: '黑先，与白棋对杀需连续紧气',
-        category: '多步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[2,1],[3,0],[3,2],[4,1]],
-            white: [[2,0],[2,2],[3,1]]
-        },
-        answer: [1, 1],
-        sequence: [[1,1],[2,0],[2,2]],
-        explanation: '黑1紧气(1,1)，白2只能提(2,0)，黑3再紧(2,2)彻底收气。黑棋比白棋快一气，最终白棋被吃。对杀中"气"的计算是关键——先数清楚双方各有几口气，再决定进攻还是防守。'
-    },
-    {
-        name: '第10题：劫争',
-        desc: '黑先，制造劫争吃白角',
-        category: '多步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[0,2],[1,1],[1,3],[2,0],[2,4],[3,1],[3,3]],
-            white: [[1,0],[1,2],[2,1],[2,2],[2,3],[3,2]]
-        },
-        answer: [0, 1],
-        sequence: [[0,1],[0,0],[1,0]],
-        explanation: '黑1扑(0,1)制造劫争！白2提(0,0)，黑3提回(1,0)形成打劫。白方需要找劫材才能回提。角部的劫争非常常见，掌握开劫的技巧是围棋进阶的必修课。注意：打劫不能立刻回提，需要先在别处下一手（找劫材）。'
-    },
-    {
-        name: '第11题：滚打包收',
-        desc: '黑先，连续滚打收紧白气',
-        category: '多步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[2,2],[2,4],[3,1],[3,5],[4,3]],
-            white: [[2,3],[3,2],[3,3],[3,4],[4,2],[4,4]]
-        },
-        answer: [4, 1],
-        sequence: [[4,1],[3,1],[4,0]],
-        explanation: '黑1打吃(4,1)，白2粘(3,1)，黑3继续打(4,0)……黑棋像滚雪球一样连续打吃白棋，将白棋的气越收越紧，最终将整块白棋"包收"吃掉。滚打包收是气势磅礴的连续进攻手段！'
-    },
-    {
-        name: '第12题：金鸡独立',
-        desc: '黑先，利用金鸡独立杀白',
-        category: '多步题',
-        size: 9, color: 1,
-        setup: {
-            black: [[1,2],[2,1],[2,4],[3,3],[4,2]],
-            white: [[1,3],[2,2],[2,3],[3,1],[3,2],[4,1]]
-        },
-        answer: [1, 1],
-        sequence: [[1,1],[1,0],[2,0]],
-        explanation: '黑1立下(1,1)形成"金鸡独立"！此时白棋两边都不入子——左侧气紧、右侧被黑棋控制，白方无法同时处理两边。黑3之后白棋气尽被吃。金鸡独立是边角对杀中的经典杀招。'
-    }
+// ==================== 围棋教程体系（3章9课27题） ====================
+const GO_CHAPTERS = [
+{ id:'capture', title:'第一章：吃子基础', icon:'🎯', lessons:[
+{ id:'atari', title:'1.1 气与提子', teaching:'<strong>气</strong>是围棋的生命线。每个棋子相邻的空交叉点叫"气"。一方棋子所有的气都被对方堵住后，这些棋子就被<strong>提掉</strong>（从棋盘上拿走）。<br><br>📌 <strong>要点：</strong>下棋前先数气，气少要逃跑，没气就被吃。',
+ problems:[
+  {name:'练习1：数气',desc:'黑先，堵住白棋最后一口气将其提掉',cat:'一步题',size:9,color:1,setup:{black:[[3,1],[4,2],[4,4]],white:[[3,2],[3,3],[4,3]]},answer:[3,4],explanation:'白△三子只剩(3,4)一口气，黑1直接紧气即可提掉白棋。下棋前先看气，这是最基本的战术意识。'},
+  {name:'练习2：逃跑',desc:'黑先，延长己方棋子的气避免被吃',cat:'一步题',size:9,color:1,setup:{black:[[3,3],[4,2]],white:[[2,3],[3,2],[4,3],[5,3]]},answer:[3,4],explanation:'黑两子即将被包围，黑1向外逃跑是最直接的应对。逃出后与更多棋子连通，气数大增。'},
+  {name:'练习3：紧气',desc:'黑先，连续紧气吃白',cat:'多步题',size:9,color:1,setup:{black:[[2,2],[3,1],[4,2]],white:[[2,3],[3,2],[3,3]]},answer:[2,3],sequence:[[2,3],[3,2]],explanation:'黑1打吃(2,3)，白2只能提，黑棋通过紧气成功迫使白棋进入绝境。'}
+]},
+{ id:'connect', title:'1.2 连接与切断', teaching:'<strong>连接</strong>：把自己的棋子连成一体，气数共享，不易被吃。<strong>切断</strong>：把对方的棋子分开，各个击破。围棋格言："棋逢断处生"，切断是进攻的第一步。<br><br>📌 <strong>要点：</strong>自己的棋子要及时连接，对方的棋子要果断切断。',
+ problems:[
+  {name:'练习4：虎口连接',desc:'黑先，用虎口的方式间接连接两块黑棋',cat:'一步题',size:9,color:1,setup:{black:[[2,2],[2,5],[3,3],[3,5],[4,2],[4,4]],white:[[2,3],[2,4],[3,2],[3,4],[4,3]]},answer:[3,4],explanation:'黑1落于(3,4)形成"虎口"——虽然相邻有空点，但白棋不敢放入（放进去就被提）。虎口是最有效的间接连接方式。'},
+  {name:'练习5：切断进攻',desc:'黑先，切断白棋的连接分而治之',cat:'一步题',size:9,color:1,setup:{black:[[3,2],[3,4],[4,1],[4,5],[5,3]],white:[[2,3],[3,3],[4,2],[4,4]]},answer:[4,3],explanation:'黑1断(4,3)将白棋分为左右两块，白棋左右不能兼顾，必然有一块被吃。切断是进攻的起点！'},
+  {name:'练习6：补断',desc:'黑先，补上自己的断点防止被切断',cat:'一步题',size:9,color:1,setup:{black:[[2,3],[3,2],[3,4],[4,1],[4,5]],white:[[2,2],[2,4],[3,1],[3,5],[4,3]]},answer:[3,3],explanation:'黑1补在(3,3)将上下两块黑棋牢牢连接。白棋想切断也无从下手。围棋中"补棋"与进攻同样重要。'}
+]},
+{ id:'double-atari', title:'1.3 双打吃', teaching:'<strong>双打吃</strong>：一子落下同时打吃对方两块棋，对方无法同时救回两边。这是最基础的吃子手筋之一。<br><br>📌 <strong>要点：</strong>寻找对方有两块气紧的棋相邻的位置，一箭双雕。',
+ problems:[
+  {name:'练习7：基础双打吃',desc:'黑先，找到双打吃的位置',cat:'一步题',size:9,color:1,setup:{black:[[3,2],[3,4],[4,3],[5,2],[5,5]],white:[[3,3],[4,2],[4,5],[5,3],[5,4]]},answer:[4,4],explanation:'黑1(4,4)同时打吃上方(4,5)和左边(4,2)两块白棋，白方只能救一边，另一边必死。'},
+  {name:'练习8：制造双打吃',desc:'黑先，先手准备然后双打吃',cat:'多步题',size:9,color:1,setup:{black:[[2,2],[2,4],[3,1],[4,2],[5,3]],white:[[2,3],[3,2],[3,3],[4,1],[4,3]]},answer:[3,3],sequence:[[3,3],[4,1]],explanation:'黑1先断打(3,3)，白2逃，黑棋形成双打吃的局面。有时双打吃需要先做好准备工作。'},
+  {name:'练习9：实战双打吃',desc:'黑先，在复杂局面中找到双打吃',cat:'一步题',size:9,color:1,setup:{black:[[2,2],[3,1],[3,4],[4,3],[5,2],[5,4]],white:[[2,3],[3,2],[3,3],[4,2],[4,4],[5,3]]},answer:[4,2],explanation:'黑1(4,2)同时打吃(3,2)和(4,4)两块白棋，在看似复杂的局面下一击制胜。'}
+]}
+]},
+{ id:'life-death', title:'第二章：死活基础', icon:'💀', lessons:[
+{ id:'eyes', title:'2.1 眼与活棋', teaching:'<strong>眼</strong>：被己方棋子围住的空点。一块棋至少需要<strong>两只真眼</strong>才能确保不死。单眼的棋最终会被对方填死。<br><br>📌 <strong>要点：</strong>真眼周围的棋子必须全部连通且牢固；假眼（对方可以破坏的眼）不算。',
+ problems:[
+  {name:'练习10：识别真眼',desc:'黑先，识别并保护自己的两只真眼',cat:'一步题',size:9,color:1,setup:{black:[[2,2],[2,3],[3,2],[3,5],[4,3],[4,4],[5,4]],white:[[1,3],[2,1],[2,4],[3,1],[3,4],[4,2],[4,5]]},answer:[2,4],explanation:'黑1粘(2,4)确保左右各有一只真眼。两只真眼=活棋，这是围棋最基本的死活法则。'},
+  {name:'练习11：假眼识别',desc:'黑先，指出白棋的假眼并破掉',cat:'一步题',size:9,color:1,setup:{black:[[1,3],[2,2],[2,4],[3,1],[3,5],[4,3]],white:[[2,3],[3,2],[3,3],[3,4]]},answer:[3,3],explanation:'白棋看起来有眼，但实际上(3,3)是假眼——黑1卡住要害，白棋的眼瞬间消失。假眼不能做活！'},
+  {name:'练习12：最少两眼',desc:'黑先，用最少棋子做出两只眼',cat:'一步题',size:9,color:1,setup:{black:[[2,2],[2,5],[3,2],[3,4],[3,5],[4,3]],white:[[1,2],[1,5],[2,1],[2,6],[3,1],[3,6],[4,2],[4,4],[4,5]]},answer:[2,3],explanation:'黑1(2,3)连通两边，在狭小空间内恰好做出两只眼。做眼的要点是找到"眼位要点"——往往在中心偏左或偏右的位置。'}
+]},
+{ id:'kill', title:'2.2 破眼杀棋', teaching:'要杀死对方的棋，关键是<strong>破坏对方的眼位</strong>。常见手段：扑（缩小眼位）、点（占据眼位要点）、卡（卡住眼角）。<br><br>📌 <strong>口诀：</strong>"敌之要点，我之要点"——对方想做眼的位置，就是你应该抢占的位置。',
+ problems:[
+  {name:'练习13：扑杀',desc:'黑先，用扑破坏白棋眼位',cat:'一步题',size:9,color:1,setup:{black:[[1,3],[2,1],[2,5],[3,2],[3,4],[4,3]],white:[[2,2],[2,3],[2,4],[3,3]]},answer:[1,2],explanation:'黑1扑(1,2)！白棋提掉后眼位反而缩小，这是"扑杀"的经典运用。'},
+  {name:'练习14：点杀',desc:'黑先，找到白棋眼位的要点',cat:'一步题',size:9,color:1,setup:{black:[[1,3],[2,2],[2,6],[3,1],[3,7],[4,2],[4,6],[5,4]],white:[[2,3],[2,4],[2,5],[3,3],[3,4],[3,5],[4,3],[4,4]]},answer:[3,4],explanation:'黑1点入(3,4)正中白棋眼位的要点！白棋的空间被一分为二，无法做出两只眼。'},
+  {name:'练习15：角部杀棋',desc:'黑先，在角上杀死白棋',cat:'多步题',size:9,color:1,setup:{black:[[0,2],[1,1],[1,3],[2,0],[2,4],[3,1]],white:[[0,0],[0,1],[1,0],[1,2],[2,1],[2,2],[2,3]]},answer:[0,0],sequence:[[0,0],[0,1]],explanation:'黑1扑(0,0)缩小眼位，白2提，黑3再点另一处。角部杀棋常常需要连续紧逼，不给白棋喘息机会。'}
+]},
+{ id:'live', title:'2.3 做活技巧', teaching:'被包围时要<strong>做活</strong>。做活需要：扩大眼位空间、占据眼位要点。角部做活空间虽小，但有特殊的棋形可以利用。<br><br>📌 <strong>要点：</strong>"左右同形走中间"——对称棋形中，中心点往往就是做活的要点。',
+ problems:[
+  {name:'练习16：角部做活',desc:'黑先，在角上做出两只眼',cat:'一步题',size:9,color:1,setup:{black:[[0,1],[1,0],[1,2],[2,1]],white:[[0,0],[0,2],[1,1],[2,0]]},answer:[2,2],explanation:'黑1占据(2,2)做活要点，在最小空间内做出两眼。角部二·2位置常常是死活的命门。'},
+  {name:'练习17：扩大眼位',desc:'黑先，扩大眼位空间做活',cat:'一步题',size:9,color:1,setup:{black:[[2,2],[2,3],[3,1],[3,4],[4,2],[4,3]],white:[[1,2],[1,3],[2,1],[2,4],[3,0],[3,5],[4,1],[4,4]]},answer:[3,2],explanation:'黑1(3,2)将眼位空间最大化，确保足够空间做出两只眼。空间越大越容易做活。'},
+  {name:'练习18：左右同形',desc:'黑先，左右同形走中间做活',cat:'一步题',size:9,color:1,setup:{black:[[2,2],[2,6],[3,3],[3,5],[4,2],[4,6],[5,3],[5,5]],white:[[2,3],[2,5],[3,2],[3,6],[4,3],[4,5],[5,2],[5,6],[6,3],[6,5]]},answer:[3,4],explanation:'黑1走(3,4)，左右对称棋形的正中位置，恰好将空间一分为二形成两眼。"左右同形走中间"是经典棋谚。'}
+]}
+]},
+{ id:'semeai', title:'第三章：对杀与手筋', icon:'⚔️', lessons:[
+{ id:'semeai-basics', title:'3.1 对杀气数', teaching:'<strong>对杀</strong>：双方棋子互相包围，都不能做活，比谁气长。对杀的核心是<strong>数气</strong>——准确算出双方的气数，气多者胜。<br><br>📌 <strong>口诀：</strong>"长气杀短气，有眼杀无眼"——气长者胜，有眼的一方通常更有利。',
+ problems:[
+  {name:'练习19：简单对杀',desc:'黑先，对杀中快一气取胜',cat:'一步题',size:9,color:1,setup:{black:[[2,1],[3,0],[3,2],[4,1]],white:[[2,0],[2,2],[3,1]]},answer:[1,1],explanation:'黑1紧气(1,1)，白棋三子只剩一口气而黑棋有两气，黑棋快一气取胜。对杀中谁先动手往往是关键。'},
+  {name:'练习20：延气',desc:'黑先，延长己方气数然后对杀',cat:'一步题',size:9,color:1,setup:{black:[[2,2],[3,1],[3,3],[4,2]],white:[[1,2],[2,1],[2,3],[3,2]]},answer:[2,2],explanation:'黑1先延气。在对杀中，有时需要先走一步延气（不是直接紧对方的气），再回头来收气。"长气"是对杀的进阶技巧。'},
+  {name:'练习21：有眼杀无眼',desc:'黑先，利用眼位在对杀中获胜',cat:'多步题',size:9,color:1,setup:{black:[[2,2],[2,4],[3,1],[3,3],[3,5],[4,2],[4,4]],white:[[1,2],[1,4],[2,1],[2,5],[3,0],[3,6],[4,1],[4,5]]},answer:[3,2],sequence:[[3,2],[2,3]],explanation:'黑1做眼(3,2)，形成"有眼杀无眼"的局面。有眼的一方气数通常更多，在对杀中占有绝对优势。'}
+]},
+{ id:'tesuji', title:'3.2 经典手筋', teaching:'<strong>手筋</strong>：围棋中巧妙有效的局部手段。常见手筋包括：枷吃（罩住对方）、倒扑（送吃后反吃）、接不归（对方想接却接不回去）等。<br><br>📌 <strong>要点：</strong>手筋的关键在于"巧"而非"力"，用最小的代价达到最大的效果。',
+ problems:[
+  {name:'练习22：枷吃',desc:'黑先，用枷吃（虚枷）罩住白棋',cat:'一步题',size:9,color:1,setup:{black:[[3,1],[3,5],[4,3],[5,2],[5,4]],white:[[3,3],[4,2],[4,4]]},answer:[3,2],explanation:'黑1虚枷(3,2)，像撒网一样罩住白棋。白棋无论怎么冲都会撞到黑棋的包围网。枷吃的精髓在于"不直接打吃而让对方无处可逃"。'},
+  {name:'练习23：倒扑',desc:'黑先，用倒扑（送吃后反吃）吃白',cat:'一步题',size:9,color:1,setup:{black:[[1,2],[2,1],[2,4],[3,3],[4,2]],white:[[2,2],[2,3],[3,2],[3,4],[4,3]]},answer:[1,3],explanation:'黑1送入虎口(1,3)！白棋提掉这枚黑子后，黑棋立刻在原位回提反吃更多白子。倒扑是先舍后得的精妙手筋。'},
+  {name:'练习24：接不归',desc:'黑先，利用接不归吃掉白棋尾巴',cat:'一步题',size:9,color:1,setup:{black:[[2,2],[2,4],[3,1],[3,3],[4,2]],white:[[2,3],[3,2],[4,1],[4,3]]},answer:[2,1],explanation:'黑1断打(2,1)，白棋右边几子处于被打吃状态且气不够，想接却接不回来。这就是"接不归"——看似能接，实则接不住。'}
+]},
+{ id:'ko', title:'3.3 劫争入门', teaching:'<strong>劫</strong>：双方可以反复提对方的棋形。围棋规则规定：一方提劫后，另一方不能立刻回提（必须在别处下一手才能回来提），这就是"打劫"。<br><br>📌 <strong>要点：</strong>打劫需要"劫材"（别处有价值的棋）来支撑。劫材多的一方在劫争中占优。',
+ problems:[
+  {name:'练习25：制造劫争',desc:'黑先，制造劫争吃掉白角',cat:'多步题',size:9,color:1,setup:{black:[[0,2],[1,1],[1,3],[2,0],[2,4],[3,1],[3,3]],white:[[1,0],[1,2],[2,1],[2,2],[2,3],[3,2]]},answer:[0,1],sequence:[[0,1],[0,0],[1,0]],explanation:'黑1扑(0,1)开劫！白2提劫，黑3需要找劫材后回提。制造劫争是扭转局势的重要手段，但需要计算劫材的多少。'},
+  {name:'练习26：滚打包收',desc:'黑先，连续滚打收气吃白',cat:'多步题',size:9,color:1,setup:{black:[[2,2],[2,4],[3,1],[3,5],[4,3]],white:[[2,3],[3,2],[3,3],[3,4],[4,2],[4,4]]},answer:[4,1],sequence:[[4,1],[3,1],[4,0]],explanation:'黑1打吃(4,1)，白2粘(3,1)，黑3继续打……像滚雪球一样将白棋"包收"吃掉。滚打包收是最有气势的连续进攻手筋！'},
+  {name:'练习27：金鸡独立',desc:'黑先，利用金鸡独立杀白',cat:'多步题',size:9,color:1,setup:{black:[[1,2],[2,1],[2,4],[3,3],[4,2]],white:[[1,3],[2,2],[2,3],[3,1],[3,2],[4,1]]},answer:[1,1],sequence:[[1,1],[1,0],[2,0]],explanation:'黑1立(1,1)形成"金鸡独立"！白棋两边都不能入子——左侧气紧、右侧被控。这是边角对杀中最精彩的杀招之一。'}
+]}
+]}
 ];
 
 // ==================== 通用围棋棋盘类 ====================
@@ -2543,96 +2519,127 @@ class GoAI {
     }
 }
 
-// ==================== 残局练习模式 ====================
+// ==================== 围棋教程练习模式 ====================
 class GoPractice {
     constructor() {
-        this.currentPuzzle = 0;
-        this.category = 'all';
-        this.filteredProblems = [...TSUMEKO_PROBLEMS];
+        this.chapterIdx = 0;
+        this.lessonIdx = 0;
+        this.puzzleIdx = 0;
         this.board = new GoBoard('goPracticeBoard', 9, 60, 40);
         this.board.resizeCanvas();
         this.solved = false;
-        this.stepIndex = 0; // 多步题当前步
+        this.completedLessons = this.loadProgress();
 
+        // 绑定事件
         document.getElementById('goPrevPuzzle').addEventListener('click', () => this.navPuzzle(-1));
         document.getElementById('goNextPuzzle').addEventListener('click', () => this.navPuzzle(1));
         document.getElementById('goResetPuzzle').addEventListener('click', () => this.resetPuzzle());
         this.board.canvas.addEventListener('click', (e) => this.handleClick(e));
 
-        // 分类筛选
-        document.querySelectorAll('.category-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                this.category = tab.getAttribute('data-cat');
-                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                this.filterProblems();
-                this.loadPuzzle(0);
+        this.renderChapters();
+        this.renderLessons();
+        this.loadPuzzle();
+    }
+
+    // 进度存储
+    loadProgress() {
+        try { return JSON.parse(localStorage.getItem('go_tutorial_progress') || '{}'); }
+        catch(e) { return {}; }
+    }
+    saveProgress() {
+        const key = `${this.chapterIdx}-${this.lessonIdx}`;
+        this.completedLessons[key] = true;
+        localStorage.setItem('go_tutorial_progress', JSON.stringify(this.completedLessons));
+    }
+
+    get chapter() { return GO_CHAPTERS[this.chapterIdx]; }
+    get lesson() { return this.chapter.lessons[this.lessonIdx]; }
+    get puzzle() { return this.lesson.problems[this.puzzleIdx]; }
+
+    renderChapters() {
+        const el = document.getElementById('chapterTabs');
+        el.innerHTML = GO_CHAPTERS.map((ch, i) =>
+            `<button class="btn btn-sm chapter-tab${i===this.chapterIdx?' active':''}" data-ci="${i}">${ch.icon} ${ch.title}</button>`
+        ).join('');
+        el.querySelectorAll('.chapter-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.chapterIdx = parseInt(btn.getAttribute('data-ci'));
+                this.lessonIdx = 0;
+                this.puzzleIdx = 0;
+                this.renderChapters();
+                this.renderLessons();
+                this.loadPuzzle();
             });
         });
-
-        this.filterProblems();
-        this.loadPuzzle(0);
     }
 
-    filterProblems() {
-        if (this.category === 'all') {
-            this.filteredProblems = [...TSUMEKO_PROBLEMS];
-        } else {
-            this.filteredProblems = TSUMEKO_PROBLEMS.filter(p => p.category === this.category);
-        }
+    renderLessons() {
+        const el = document.getElementById('lessonTabs');
+        el.innerHTML = this.chapter.lessons.map((ls, i) => {
+            const key = `${this.chapterIdx}-${i}`;
+            const done = this.completedLessons[key] ? ' done' : '';
+            return `<button class="btn btn-sm lesson-tab${i===this.lessonIdx?' active':''}${done}" data-li="${i}">${ls.title}</button>`;
+        }).join('');
+        el.querySelectorAll('.lesson-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.lessonIdx = parseInt(btn.getAttribute('data-li'));
+                this.puzzleIdx = 0;
+                this.renderLessons();
+                this.loadPuzzle();
+            });
+        });
     }
 
-    getPuzzle(index) {
-        if (this.filteredProblems.length === 0) return null;
-        if (index < 0) index = this.filteredProblems.length - 1;
-        if (index >= this.filteredProblems.length) index = 0;
-        return this.filteredProblems[index];
-    }
-
-    navPuzzle(dir) {
-        const newIdx = this.currentPuzzle + dir;
-        if (newIdx < 0 || newIdx >= this.filteredProblems.length) return;
-        this.loadPuzzle(newIdx);
-    }
-
-    loadPuzzle(index) {
-        if (index < 0 || index >= this.filteredProblems.length) return;
-        this.currentPuzzle = index;
+    loadPuzzle() {
         this.solved = false;
-        this.stepIndex = 0;
-
-        const puzzle = this.filteredProblems[index];
-        const total = this.filteredProblems.length;
-        const globalIdx = TSUMEKO_PROBLEMS.indexOf(puzzle) + 1;
-
-        this.board.size = puzzle.size;
+        const p = this.puzzle;
+        this.board.size = p.size;
         this.board.cellSize = 60;
         this.board.padding = 40;
         this.board.resizeCanvas();
-        this.board.board = Array(puzzle.size).fill(null).map(() => Array(puzzle.size).fill(0));
+        this.board.board = Array(p.size).fill(null).map(() => Array(p.size).fill(0));
         this.board.lastMove = null;
         this.board.highlights = [];
         this.board.marks = [];
         this.board.territoryHints = [];
+        for (const [r,c] of p.setup.black) this.board.board[r][c] = 1;
+        for (const [r,c] of p.setup.white) this.board.board[r][c] = 2;
+        this.board.marks = p.setup.white.slice(-2).map(([r,c])=>[r,c,'triangle']);
 
-        for (const [r, c] of puzzle.setup.black) this.board.board[r][c] = 1;
-        for (const [r, c] of puzzle.setup.white) this.board.board[r][c] = 2;
-
-        // 标记关键白子
-        this.board.marks = puzzle.setup.white.slice(-2).map(([r, c]) => [r, c, 'triangle']);
-
-        document.getElementById('practiceTitle').textContent = `【${puzzle.category}】${puzzle.name} (${index + 1}/${total})`;
-        document.getElementById('practiceDesc').textContent = puzzle.desc;
+        // 更新 UI
+        const total = this.lesson.problems.length;
+        document.getElementById('practiceTitle').textContent = `【${p.cat || '练习题'}】${p.name} (${this.puzzleIdx+1}/${total})`;
+        document.getElementById('practiceDesc').textContent = p.desc;
+        document.getElementById('practiceProgress').textContent = `${this.puzzleIdx+1}/${total}`;
         document.getElementById('practiceResult').textContent = '';
         document.getElementById('practiceResult').className = 'practice-result';
         document.getElementById('practiceExplanation').style.display = 'none';
 
+        // 教学文案
+        const tb = document.getElementById('teachingBox');
+        const tt = document.getElementById('teachingText');
+        if (this.lesson.teaching) {
+            tt.innerHTML = this.lesson.teaching;
+            tb.style.display = 'block';
+        } else {
+            tb.style.display = 'none';
+        }
+
+        document.getElementById('goPrevPuzzle').disabled = this.puzzleIdx === 0;
+        document.getElementById('goNextPuzzle').disabled = this.puzzleIdx >= total - 1;
+
         this.board.draw();
     }
 
-    resetPuzzle() {
-        this.loadPuzzle(this.currentPuzzle);
+    navPuzzle(dir) {
+        const newIdx = this.puzzleIdx + dir;
+        const total = this.lesson.problems.length;
+        if (newIdx < 0 || newIdx >= total) return;
+        this.puzzleIdx = newIdx;
+        this.loadPuzzle();
     }
+
+    resetPuzzle() { this.loadPuzzle(); }
 
     handleClick(e) {
         if (this.solved) return;
@@ -2641,70 +2648,58 @@ class GoPractice {
         const [row, col] = pos;
         if (this.board.board[row][col] !== 0) return;
 
-        const puzzle = this.filteredProblems[this.currentPuzzle];
-        const [ar, ac] = puzzle.answer;
-
-        this.board.board[row][col] = puzzle.color;
+        const p = this.puzzle;
+        const [ar, ac] = p.answer;
+        this.board.board[row][col] = p.color;
         this.board.lastMove = [row, col];
         this.board.draw();
 
         setTimeout(() => {
             if (row === ar && col === ac) {
                 this.solved = true;
-                document.getElementById('practiceResult').textContent = '✅ 正确！干得漂亮！';
+                document.getElementById('practiceResult').textContent = '✅ 正确！';
                 document.getElementById('practiceResult').className = 'practice-result success';
-                this.board.highlights = [[row, col, 'rgba(39, 174, 96, 0.5)']];
-
-                // 展示解析
-                this.showExplanation(puzzle);
-
-                // 多步题演示后续步骤
-                if (puzzle.sequence && puzzle.sequence.length > 0) {
-                    this.demoSequence(puzzle);
+                this.board.highlights = [[row, col, 'rgba(39,174,96,0.5)']];
+                this.showExplanation(p);
+                if (p.sequence && p.sequence.length > 0) this.demoSequence(p);
+                // 标记课时完成
+                if (this.puzzleIdx >= this.lesson.problems.length - 1) {
+                    this.saveProgress();
+                    this.renderLessons();
                 }
             } else {
                 document.getElementById('practiceResult').textContent = '❌ 不对，再试试！';
                 document.getElementById('practiceResult').className = 'practice-result fail';
                 this.board.board[row][col] = 0;
                 this.board.lastMove = null;
-                this.board.highlights = [[row, col, 'rgba(231, 76, 60, 0.4)']];
+                this.board.highlights = [[row, col, 'rgba(231,76,60,0.4)']];
                 setTimeout(() => { this.board.highlights = []; this.board.draw(); }, 800);
             }
             this.board.draw();
         }, 200);
     }
 
-    showExplanation(puzzle) {
-        const expEl = document.getElementById('practiceExplanation');
-        if (puzzle.explanation) {
-            const categoryLabel = puzzle.category === '一步题' ? '⚡ 一步题' : '📋 多步题';
-            expEl.innerHTML = `<strong>${categoryLabel} · 解析：</strong>${puzzle.explanation}`;
-            expEl.style.display = 'block';
+    showExplanation(p) {
+        const el = document.getElementById('practiceExplanation');
+        if (p.explanation) {
+            el.innerHTML = `<strong>📝 解析：</strong>${p.explanation}`;
+            el.style.display = 'block';
         }
     }
 
-    demoSequence(puzzle) {
-        // 逐步演示后续落子
-        const color = puzzle.color;
-        const opponent = color === 1 ? 2 : 1;
+    demoSequence(p) {
+        const color = p.color, opp = color===1?2:1;
         let delay = 600;
-
-        puzzle.sequence.forEach(([r, c], i) => {
+        p.sequence.forEach(([r,c], i) => {
             setTimeout(() => {
-                const player = i % 2 === 0 ? opponent : color;
-                this.board.board[r][c] = player;
-                this.board.lastMove = [r, c];
-                this.board.highlights = [[r, c, i % 2 === 0 ? 'rgba(255,255,255,0.7)' : 'rgba(39,174,96,0.5)']];
+                this.board.board[r][c] = i%2===0?opp:color;
+                this.board.lastMove = [r,c];
+                this.board.highlights = [[r,c,i%2===0?'rgba(255,255,255,0.7)':'rgba(39,174,96,0.5)']];
                 this.board.draw();
             }, delay);
             delay += 600;
         });
-
-        // 最后清除高亮
-        setTimeout(() => {
-            this.board.highlights = [];
-            this.board.draw();
-        }, delay);
+        setTimeout(() => { this.board.highlights = []; this.board.draw(); }, delay);
     }
 }
 

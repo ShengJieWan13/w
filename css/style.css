@@ -755,6 +755,67 @@ body {
     border-color: var(--primary);
 }
 
+/* 章节 & 课时选择 */
+.chapter-tabs, .lesson-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+}
+
+.chapter-tab, .lesson-tab {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1.5px solid var(--border);
+    background: var(--bg-card);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    color: var(--text-light);
+}
+
+.chapter-tab.active, .lesson-tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.chapter-tab:hover:not(.active), .lesson-tab:hover:not(.active) {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.lesson-tab.done { border-color: #27ae60; color: #27ae60; }
+.lesson-tab.done::after { content: ' ✓'; }
+
+/* 教学文案 */
+.teaching-box {
+    width: 100%;
+    max-width: 540px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: #92400e;
+}
+
+.teaching-text strong {
+    color: #b45309;
+    font-size: 0.95rem;
+}
+
+.practice-progress {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    min-width: 32px;
+    text-align: center;
+}
+
 .practice-result {
     font-size: 1rem;
     font-weight: 700;
