@@ -137,6 +137,11 @@
                     <!-- 残局练习面板 -->
                     <div class="go-sub-panel active" id="goPanelPractice">
                         <div class="practice-header">
+                            <div class="practice-category-tabs" id="practiceCategoryTabs">
+                                <button class="btn btn-sm category-tab active" data-cat="all">全部</button>
+                                <button class="btn btn-sm category-tab" data-cat="一步题">一步题</button>
+                                <button class="btn btn-sm category-tab" data-cat="多步题">多步题</button>
+                            </div>
                             <span class="practice-title" id="practiceTitle">题目 1/12</span>
                             <span class="practice-desc" id="practiceDesc">黑先，请吃掉白棋</span>
                             <div class="practice-nav">
@@ -149,6 +154,7 @@
                         <div class="go-board-wrapper">
                             <canvas id="goPracticeBoard" width="540" height="540"></canvas>
                         </div>
+                        <div class="practice-explanation" id="practiceExplanation" style="display:none"></div>
                     </div>
 
                     <!-- AI 对战面板 -->
