@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>益智游戏空间</title>
+<style>
+:root{--bg:#f8f9fa;--bg-card:#ffffff;--bg-sidebar:#1a1a2e;--text:#2d3436;--text-light:#636e72;--text-sidebar:#dfe6e9;--primary:#6c5ce7;--primary-hover:#5a4bd1;--accent:#a29bfe;--border:#e0e0e0;--shadow:0 2px 12px rgba(0,0,0,0.06);--shadow-lg:0 8px 32px rgba(0,0,0,0.10);--radius:12px;--radius-sm:8px;--transition:0.2s cubic-bezier(0.4,0,0.2,1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.app{display:flex;min-height:100vh}
+.sidebar{width:260px;background:var(--bg-sidebar);color:var(--text-sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform var(--transition)}
+.sidebar-header{padding:32px 24px 20px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.logo{font-size:1.4rem;font-weight:700;letter-spacing:0.02em}
+.subtitle{font-size:0.8rem;color:rgba(255,255,255,0.45);margin-top:6px}
+.game-nav{flex:1;padding:12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.game-nav-item{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;border-radius:var(--radius-sm);background:transparent;color:rgba(255,255,255,0.65);cursor:pointer;text-align:left;transition:all var(--transition);font-size:0.95rem}
+.game-nav-item:hover{background:rgba(255,255,255,0.08);color:#fff}
+.game-nav-item.active{background:var(--primary);color:#fff;box-shadow:0 4px 15px rgba(108,92,231,0.4)}
+.nav-icon{font-size:1.3rem;width:28px;text-align:center;flex-shrink:0}
+.nav-text{font-weight:600;flex-shrink:0}
+.nav-desc{font-size:0.75rem;opacity:0.55;margin-left:auto;white-space:nowrap}
+.sidebar-footer{padding:16px 24px;border-top:1px solid rgba(255,255,255,0.08);font-size:0.75rem;color:rgba(255,255,255,0.3);text-align:center}
+.main{flex:1;margin-left:260px;padding:32px;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+.menu-toggle{display:none;position:fixed;top:16px;left:16px;z-index:200;width:44px;height:44px;border-radius:50%;border:none;background:var(--bg-card);box-shadow:var(--shadow);cursor:pointer;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.menu-toggle span{display:block;width:20px;height:2px;background:var(--text);border-radius:1px;transition:var(--transition)}
+.game-panel{display:none;width:100%;max-width:600px;flex-direction:column;align-items:center;gap:20px}
+.game-panel.active{display:flex}
+.game-header{width:100%;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.game-header h2{font-size:1.5rem;font-weight:700;color:var(--text)}
+.game-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.game-hint{font-size:0.85rem;color:var(--text-light);text-align:center;margin-top:8px}
+.btn{padding:8px 18px;border:none;border-radius:20px;font-size:0.88rem;font-weight:600;cursor:pointer;transition:all var(--transition);white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);transform:translateY(-1px);box-shadow:0 4px 12px rgba(108,92,231,0.35)}
+.btn-outline{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
+.btn-outline:hover{background:var(--primary);color:#fff}
+.select-sm{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg-card);font-size:0.85rem;color:var(--text);cursor:pointer;transition:var(--transition)}
+.select-sm:focus{outline:none;border-color:var(--primary)}
+.score-display,.turn-indicator,.score,.mine-count,.timer{font-size:0.88rem;color:var(--text-light);white-space:nowrap}
+.score-display strong,.score strong,.mine-count strong,.timer strong{color:var(--text)}
+/* 数独 */
+.sudoku-board{display:grid;grid-template-columns:repeat(9,1fr);width:100%;max-width:450px;aspect-ratio:1;border:3px solid var(--text);border-radius:4px;background:var(--bg-card);box-shadow:var(--shadow-lg)}
+.sudoku-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:600;cursor:pointer;border:0.5px solid var(--border);transition:all var(--transition);color:var(--text);user-select:none;position:relative}
+.sudoku-cell:nth-child(3n){border-right:2px solid var(--text)}
+.sudoku-cell:nth-child(n+19):nth-child(-n+27),.sudoku-cell:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid var(--text)}
+.sudoku-cell:hover{background:rgba(108,92,231,0.08)}
+.sudoku-cell.selected{background:rgba(108,92,231,0.18);box-shadow:inset 0 0 0 2px var(--primary)}
+.sudoku-cell.given{color:var(--text);font-weight:700}
+.sudoku-cell.same-number{background:rgba(108,92,231,0.1)}
+.sudoku-cell.error{color:#e74c3c;background:rgba(231,76,60,0.08)}
+.sudoku-cell.hint{animation:pulse 0.6s ease-out}
+@keyframes pulse{0%{background:var(--primary);color:#fff;transform:scale(1.08)}100%{background:transparent;color:var(--primary);transform:scale(1)}}
+.sudoku-numpad{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.numpad-btn{width:44px;height:44px;border-radius:50%;border:2px solid var(--border);background:var(--bg-card);font-size:1.1rem;font-weight:700;cursor:pointer;transition:all var(--transition);color:var(--text)}
+.numpad-btn:hover{border-color:var(--primary);background:rgba(108,92,231,0.06);transform:translateY(-2px)}
+.numpad-btn.erase{font-size:0.8rem;width:auto;padding:0 16px;border-radius:22px}
+/* 数独增强 */
+.sudoku-info{width:100%;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.timer-display{font-size:1.1rem;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;font-family:"SF Mono","Cascadia Code","Consolas",monospace}
+.timer-display.running{color:var(--primary)}
+.hint-count{font-size:0.85rem;color:var(--text-light)}
+.btn-accent{background:linear-gradient(135deg,#f093fb,#f5af19);color:#fff;border:none}
+.btn-accent:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(240,147,251,0.4)}
+.btn-sm{padding:5px 14px;font-size:0.8rem;border-radius:16px}
+.btn-draft{background:transparent;color:var(--text-light);border:1.5px solid var(--border);transition:all var(--transition)}
+.btn-draft:hover{border-color:var(--primary);color:var(--primary)}
+.btn-draft.active{background:#fff3cd;color:#856404;border-color:#ffc107}
+.sudoku-cell .draft-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);width:100%;height:100%;padding:1px}
+.sudoku-cell .draft-num{display:flex;align-items:center;justify-content:center;font-size:0.45rem;font-weight:500;color:#888;line-height:1}
+/* 统计弹窗 */
+.stats-modal{display:none;position:fixed;inset:0;z-index:300;align-items:center;justify-content:center}
+.stats-modal.open{display:flex}
+.stats-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px)}
+.stats-panel{position:relative;background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:28px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto;z-index:1;animation:slideUp 0.25s ease-out}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.stats-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.stats-header h3{font-size:1.2rem}
+.stats-close-btn{width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-light);transition:var(--transition)}
+.stats-close-btn:hover{background:#e74c3c;color:#fff}
+.stats-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-item{text-align:center;padding:12px 6px;background:var(--bg);border-radius:var(--radius-sm)}
+.stat-value{display:block;font-size:1.3rem;font-weight:700;color:var(--primary);font-family:"SF Mono","Cascadia Code","Consolas",monospace}
+.stat-label{display:block;font-size:0.7rem;color:var(--text-light);margin-top:2px}
+.stats-panel h4{font-size:0.9rem;margin-bottom:8px;color:var(--text)}
+.stats-history{display:flex;flex-direction:column;gap:6px}
+.stats-empty{text-align:center;color:var(--text-light);font-size:0.85rem;padding:20px}
+.stat-record{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border-radius:6px;font-size:0.82rem}
+.stat-record .rec-date{color:var(--text-light)}
+.stat-record .rec-time{font-weight:700;font-family:"SF Mono","Cascadia Code","Consolas",monospace;color:var(--primary)}
+.stat-record .rec-diff{font-size:0.7rem;padding:2px 8px;border-radius:10px;background:var(--border)}
+/* 围棋 */
+.go-board-wrapper{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:16px;overflow:auto;max-width:100%}
+.go-board-wrapper canvas{display:block;max-width:100%;height:auto}
+/* 2048 */
+.tfe-board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;max-width:380px;aspect-ratio:1;background:#bbada0;border-radius:var(--radius);padding:10px;box-shadow:var(--shadow-lg)}
+.tfe-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;border-radius:6px;background:#cdc1b4;color:#776e65;transition:all 0.1s ease}
+.tfe-cell[data-value="2"]{background:#eee4da}
+.tfe-cell[data-value="4"]{background:#ede0c8}
+.tfe-cell[data-value="8"]{background:#f2b179;color:#fff}
+.tfe-cell[data-value="16"]{background:#f59563;color:#fff}
+.tfe-cell[data-value="32"]{background:#f67c5f;color:#fff}
+.tfe-cell[data-value="64"]{background:#f65e3b;color:#fff}
+.tfe-cell[data-value="128"]{background:#edcf72;color:#fff;font-size:1.2rem}
+.tfe-cell[data-value="256"]{background:#edcc61;color:#fff;font-size:1.2rem}
+.tfe-cell[data-value="512"]{background:#edc850;color:#fff;font-size:1.2rem}
+.tfe-cell[data-value="1024"]{background:#edc53f;color:#fff;font-size:1rem}
+.tfe-cell[data-value="2048"]{background:#edc22e;color:#fff;font-size:1rem}
+/* 扫雷 */
+.ms-board{display:inline-grid;gap:1px;background:#bdbdbd;border:3px solid #7b7b7b;border-radius:2px;box-shadow:var(--shadow-lg);user-select:none}
+.ms-cell{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;cursor:pointer;background:#c0c0c0;border:2px outset #fff;transition:none}
+.ms-cell:active{border-style:inset}
+.ms-cell.revealed{background:#d0d0d0;border:1px solid #999}
+.ms-cell.flagged{background:#c0c0c0}
+.ms-cell.mine{background:#e74c3c}
+.ms-cell[data-count="1"]{color:#00f}
+.ms-cell[data-count="2"]{color:#008000}
+.ms-cell[data-count="3"]{color:#f00}
+.ms-cell[data-count="4"]{color:#000080}
+.ms-cell[data-count="5"]{color:#800000}
+.ms-cell[data-count="6"]{color:#008080}
+.ms-cell[data-count="7"]{color:#000}
+.ms-cell[data-count="8"]{color:#808080}
+/* 记忆翻牌 */
+.memory-board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;max-width:420px}
+.mem-card{aspect-ratio:1;perspective:800px;cursor:pointer}
+.mem-card-inner{position:relative;width:100%;height:100%;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);transform-style:preserve-3d}
+.mem-card.flipped .mem-card-inner{transform:rotateY(180deg)}
+.mem-card-front,.mem-card-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:2rem}
+.mem-card-front{background:var(--primary);color:#fff;box-shadow:var(--shadow)}
+.mem-card-back{background:var(--bg-card);border:2px solid var(--border);transform:rotateY(180deg);box-shadow:var(--shadow)}
+.mem-card.matched .mem-card-back{border-color:#27ae60;background:#eafaf1}
+/* 滑块拼图 */
+.puzzle-board{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;width:100%;max-width:380px;aspect-ratio:1;background:var(--text);border-radius:var(--radius);padding:3px;box-shadow:var(--shadow-lg)}
+.puz-tile{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;border-radius:6px;cursor:pointer;color:#fff;transition:all 0.12s ease;user-select:none}
+.puz-tile.empty{background:transparent;cursor:default}
+/* 菜单遮罩 */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
+.overlay.active{display:block}
+/* 响应式 */
+@media(max-width:768px){
+.sidebar{transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0)}
+.main{margin-left:0;padding:20px 12px}
+.menu-toggle{display:flex}
+.game-nav-item .nav-desc{display:none}
+.game-header{flex-direction:column;align-items:flex-start}
+.sudoku-board{max-width:100%}
+.sudoku-cell{font-size:1rem}
+.ms-cell{width:24px;height:24px;font-size:0.7rem}
+.tfe-cell{font-size:1.1rem}
+.game-panel{padding-top:20px}
+}
+@media(max-width:400px){
+.main{padding:12px 6px}
+.numpad-btn{width:36px;height:36px;font-size:0.95rem}
+.ms-cell{width:20px;height:20px;font-size:0.65rem}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-header"><h1 class="logo">🎯 益智空间</h1><p class="subtitle">静心 · 思考 · 挑战</p></div>
+<nav class="game-nav">
+<button class="game-nav-item active" data-game="sudoku"><span class="nav-icon">🧩</span><span class="nav-text">数独</span><span class="nav-desc">经典数字逻辑</span></button>
+<button class="game-nav-item" data-game="go"><span class="nav-icon">⚫</span><span class="nav-text">围棋</span><span class="nav-desc">黑白博弈对弈</span></button>
+<button class="game-nav-item" data-game="2048"><span class="nav-icon">🔢</span><span class="nav-text">2048</span><span class="nav-desc">数字合成挑战</span></button>
+<button class="game-nav-item" data-game="minesweeper"><span class="nav-icon">💣</span><span class="nav-text">扫雷</span><span class="nav-desc">逻辑推理排雷</span></button>
+<button class="game-nav-item" data-game="memory"><span class="nav-icon">🃏</span><span class="nav-text">记忆翻牌</span><span class="nav-desc">记忆力大考验</span></button>
+<button class="game-nav-item" data-game="puzzle"><span class="nav-icon">🖼️</span><span class="nav-text">滑块拼图</span><span class="nav-desc">图片复原挑战</span></button>
+</nav>
+<div class="sidebar-footer"><p>无广告 · 纯享版</p></div>
+</aside>
+<main class="main">
+<button class="menu-toggle" id="menuToggle" aria-label="菜单"><span></span><span></span><span></span></button>
+<div class="game-container" id="gameContainer">
+
+<!-- 数独 -->
+<div class="game-panel active" id="game-sudoku">
+<div class="game-header">
+<h2>数独 Sudoku</h2>
+<div class="game-controls">
+<select id="sudokuDifficulty" class="select-sm">
+<option value="very_easy">入门</option><option value="easy">简单</option><option value="medium" selected>中等</option><option value="hard">困难</option><option value="expert">专家</option><option value="master">大师</option>
+</select>
+<button class="btn btn-accent" id="sudokuDaily">📅 每日一题</button>
+<button class="btn btn-primary" id="sudokuNewGame">新游戏</button>
+<button class="btn btn-outline" id="sudokuHint">提示</button>
+</div></div>
+<div class="sudoku-info">
+<span class="timer-display" id="sudokuTimerDisplay">⏱ <strong id="sudokuTimer">00:00</strong></span>
+<button class="btn btn-sm btn-draft" id="sudokuDraftToggle">✏️ 草稿</button>
+<button class="btn btn-sm btn-outline" id="sudokuStatsBtn">📊 统计</button>
+<span class="hint-count" id="sudokuHintCount">💡 提示: 0</span>
+</div>
+<div class="sudoku-board" id="sudokuBoard"></div>
+<div class="sudoku-numpad" id="sudokuNumpad"></div>
+</div>
+
+<!-- 统计弹窗 -->
+<div class="stats-modal" id="sudokuStatsModal">
+<div class="stats-overlay"></div>
+<div class="stats-panel">
+<div class="stats-header"><h3>📊 数独统计</h3><button class="stats-close-btn" id="statsClose">✕</button></div>
+<div class="stats-summary">
+<div class="stat-item"><span class="stat-value" id="statTotal">0</span><span class="stat-label">完成数</span></div>
+<div class="stat-item"><span class="stat-value" id="statBestTime">--:--</span><span class="stat-label">最佳时间</span></div>
+<div class="stat-item"><span class="stat-value" id="statAvgTime">--:--</span><span class="stat-label">平均时间</span></div>
+<div class="stat-item"><span class="stat-value" id="statStreak">0</span><span class="stat-label">连续天数</span></div>
+</div>
+<h4>最近记录</h4>
+<div class="stats-history" id="statsHistory"><p class="stats-empty">暂无记录，快去挑战吧！</p></div>
+</div></div>
+
+<!-- 围棋 -->
+<div class="game-panel" id="game-go">
+<div class="game-header"><h2>围棋 Go</h2>
+<div class="game-controls">
+<span class="turn-indicator" id="goTurn">⚫ 黑方回合</span>
+<span class="score" id="goScore">黑 0 : 0 白</span>
+<button class="btn btn-outline" id="goPass">弃权</button>
+<button class="btn btn-primary" id="goNewGame">新游戏</button>
+</div></div>
+<div class="go-board-wrapper"><canvas id="goBoard" width="540" height="540"></canvas></div>
+</div>
+
+<!-- 2048 -->
+<div class="game-panel" id="game-2048">
+<div class="game-header"><h2>2048</h2>
+<div class="game-controls">
+<span class="score-display">🏆 <strong id="tfeScore">0</strong></span>
+<span class="score-display">⭐ <strong id="tfeBest">0</strong></span>
+<button class="btn btn-primary" id="tfeNewGame">新游戏</button>
+</div></div>
+<div class="tfe-board" id="tfeBoard"></div>
+<p class="game-hint">使用方向键 ↑↓←→ 或滑动操作</p>
+</div>
+
+<!-- 扫雷 -->
+<div class="game-panel" id="game-minesweeper">
+<div class="game-header"><h2>扫雷 Minesweeper</h2>
+<div class="game-controls">
+<select id="msDifficulty" class="select-sm">
+<option value="easy" selected>初级 (9×9)</option><option value="medium">中级 (16×16)</option><option value="hard">高级 (30×16)</option>
+</select>
+<span class="mine-count">💣 <strong id="msMinesLeft">10</strong></span>
+<span class="timer">⏱ <strong id="msTimer">0</strong>s</span>
+<button class="btn btn-primary" id="msNewGame">新游戏</button>
+</div></div>
+<div class="ms-board" id="msBoard"></div>
+</div>
+
+<!-- 记忆翻牌 -->
+<div class="game-panel" id="game-memory">
+<div class="game-header"><h2>记忆翻牌 Memory</h2>
+<div class="game-controls">
+<span class="score-display">🔄 <strong id="memMoves">0</strong> 步</span>
+<span class="score-display">✅ <strong id="memPairs">0</strong>/8</span>
+<button class="btn btn-primary" id="memNewGame">新游戏</button>
+</div></div>
+<div class="memory-board" id="memBoard"></div>
+</div>
+
+<!-- 滑块拼图 -->
+<div class="game-panel" id="game-puzzle">
+<div class="game-header"><h2>滑块拼图 Sliding Puzzle</h2>
+<div class="game-controls">
+<span class="score-display">🔄 <strong id="puzMoves">0</strong> 步</span>
+<button class="btn btn-outline" id="puzShuffle">打乱</button>
+<button class="btn btn-primary" id="puzNewGame">新游戏</button>
+</div></div>
+<div class="puzzle-board" id="puzBoard"></div>
+</div>
+
+</div></main></div>
+
+<script>
+// ============ 数独 ============
+class SudokuGame{constructor(){this.board=Array(9).fill(null).map(()=>Array(9).fill(0));this.solution=Array(9).fill(null).map(()=>Array(9).fill(0));this.given=Array(9).fill(null).map(()=>Array(9).fill(false));this.drafts=Array(9).fill(null).map(()=>Array(9).fill(null).map(()=>new Set()));this.selectedRow=-1;this.selectedCol=-1;this.difficulty='medium';this.isDaily=false;this.draftMode=false;this.timerSeconds=0;this.timerInterval=null;this.timerRunning=false;this.started=false;this.hintCount=0;this.boardEl=document.getElementById('sudokuBoard');this.numpadEl=document.getElementById('sudokuNumpad');document.getElementById('sudokuNewGame').addEventListener('click',()=>this.newGame());document.getElementById('sudokuDaily').addEventListener('click',()=>this.loadDaily());document.getElementById('sudokuHint').addEventListener('click',()=>this.giveHint());document.getElementById('sudokuDraftToggle').addEventListener('click',()=>this.toggleDraftMode());document.getElementById('sudokuStatsBtn').addEventListener('click',()=>this.openStats());document.getElementById('statsClose').addEventListener('click',()=>this.closeStats());document.querySelector('.stats-overlay').addEventListener('click',()=>this.closeStats());document.getElementById('sudokuDifficulty').addEventListener('change',e=>{this.difficulty=e.target.value;this.isDaily=false;this.newGame()});this.buildNumpad();this.newGame();this.bindKeys()}
+getDifficultyConfig(){const c={very_easy:{clues:45,label:'入门'},easy:{clues:38,label:'简单'},medium:{clues:32,label:'中等'},hard:{clues:27,label:'困难'},expert:{clues:23,label:'专家'},master:{clues:20,label:'大师'}};return c[this.difficulty]||c.medium}
+seededRandom(seed){let h=0;for(let i=0;i<seed.length;i++)h=((h<<5)-h)+seed.charCodeAt(i);return function(){h^=(h<<13);h^=(h>>17);h^=(h<<5);return(h>>>0)/4294967296}}
+bindKeys(){document.addEventListener('keydown',e=>{if(!document.getElementById('game-sudoku').classList.contains('active'))return;if(this.selectedRow===-1)return;const n=parseInt(e.key);if(n>=1&&n<=9){e.preventDefault();if(this.draftMode)this.toggleDraft(this.selectedRow,this.selectedCol,n);else this.placeNumber(n)}else if(e.key==='Backspace'||e.key==='Delete'||e.key==='0'){e.preventDefault();if(this.draftMode)this.clearDrafts(this.selectedRow,this.selectedCol);else this.placeNumber(0)}else if(e.key==='ArrowUp'&&this.selectedRow>0){e.preventDefault();this.selectCell(this.selectedRow-1,this.selectedCol)}else if(e.key==='ArrowDown'&&this.selectedRow<8){e.preventDefault();this.selectCell(this.selectedRow+1,this.selectedCol)}else if(e.key==='ArrowLeft'&&this.selectedCol>0){e.preventDefault();this.selectCell(this.selectedRow,this.selectedCol-1)}else if(e.key==='ArrowRight'&&this.selectedCol<8){e.preventDefault();this.selectCell(this.selectedRow,this.selectedCol+1)}else if(e.key===' '||e.key==='Spacebar'){e.preventDefault();this.toggleDraftMode()}})}
+buildNumpad(){this.numpadEl.innerHTML='';for(let i=1;i<=9;i++){const b=document.createElement('button');b.className='numpad-btn';b.textContent=i;b.addEventListener('click',()=>{if(this.draftMode)this.toggleDraft(this.selectedRow,this.selectedCol,i);else this.placeNumber(i)});this.numpadEl.appendChild(b)}const e=document.createElement('button');e.className='numpad-btn erase';e.textContent='✕ 清除';e.addEventListener('click',()=>{if(this.draftMode)this.clearDrafts(this.selectedRow,this.selectedCol);else this.placeNumber(0)});this.numpadEl.appendChild(e)}
+toggleDraftMode(){this.draftMode=!this.draftMode;const b=document.getElementById('sudokuDraftToggle');if(this.draftMode){b.classList.add('active');b.textContent='✏️ 草稿:开'}else{b.classList.remove('active');b.textContent='✏️ 草稿'}}
+toggleDraft(row,col,num){if(row<0||col<0)return;if(this.given[row][col])return;if(this.board[row][col]!==0)return;if(this.drafts[row][col].has(num))this.drafts[row][col].delete(num);else this.drafts[row][col].add(num);this.startTimerIfNeeded();this.render()}
+clearDrafts(row,col){if(row<0||col<0)return;if(this.given[row][col])return;this.drafts[row][col].clear();this.render()}
+placeNumber(num){if(this.selectedRow===-1)return;if(this.given[this.selectedRow][this.selectedCol])return;this.board[this.selectedRow][this.selectedCol]=num;this.drafts[this.selectedRow][this.selectedCol].clear();this.startTimerIfNeeded();this.render();if(this.isComplete())this.finishGame()}
+startTimerIfNeeded(){if(!this.started){this.started=true;this.startTimer()}}
+startTimer(){if(this.timerRunning)return;this.timerRunning=true;this.timerSeconds=0;this.updateTimerDisplay();document.getElementById('sudokuTimerDisplay').classList.add('running');this.timerInterval=setInterval(()=>{this.timerSeconds++;this.updateTimerDisplay()},1000)}
+stopTimer(){this.timerRunning=false;clearInterval(this.timerInterval);this.timerInterval=null;document.getElementById('sudokuTimerDisplay').classList.remove('running')}
+resetTimer(){this.stopTimer();this.timerSeconds=0;this.started=false;document.getElementById('sudokuTimerDisplay').classList.remove('running');this.updateTimerDisplay()}
+updateTimerDisplay(){const m=Math.floor(this.timerSeconds/60);const s=this.timerSeconds%60;document.getElementById('sudokuTimer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+formatTime(sec){const m=Math.floor(sec/60);const s=sec%60;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+generatePuzzle(seed){const rand=seed?this.seededRandom(seed):()=>Math.random();this.fillSolution(rand);this.solution=this.board.map(r=>[...r]);this.given=Array(9).fill(null).map(()=>Array(9).fill(true));const cfg=this.getDifficultyConfig();const cellsToRemove=81-cfg.clues;const pos=[];for(let r=0;r<9;r++)for(let c=0;c<9;c++)pos.push([r,c]);this.shuffle(pos,rand);for(let i=0;i<cellsToRemove;i++){const[r,c]=pos[i];this.board[r][c]=0;this.given[r][c]=false}}
+fillSolution(rand){this.board=Array(9).fill(null).map(()=>Array(9).fill(0));this.solveRandom(this.board,rand||(()=>Math.random()))}
+solveRandom(grid,rand){for(let r=0;r<9;r++){for(let c=0;c<9;c++){if(grid[r][c]===0){const nums=[1,2,3,4,5,6,7,8,9];this.shuffle(nums,rand);for(const n of nums){if(this.isValid(grid,r,c,n)){grid[r][c]=n;if(this.solveRandom(grid,rand))return true;grid[r][c]=0}}return false}}}return true}
+isValid(grid,row,col,num){for(let i=0;i<9;i++){if(grid[row][i]===num)return false;if(grid[i][col]===num)return false}const br=Math.floor(row/3)*3;const bc=Math.floor(col/3)*3;for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(grid[r][c]===num)return false;return true}
+shuffle(arr,rand){for(let i=arr.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}}
+loadDaily(){const d=new Date();const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');this.isDaily=true;this.difficulty='medium';document.getElementById('sudokuDifficulty').value='medium';this.resetGame();this.generatePuzzle('sudoku-daily-'+ds);this.render()}
+newGame(){this.isDaily=false;this.resetGame();this.generatePuzzle(null);this.render()}
+resetGame(){this.selectedRow=-1;this.selectedCol=-1;this.hintCount=0;this.drafts=Array(9).fill(null).map(()=>Array(9).fill(null).map(()=>new Set()));this.draftMode=false;const b=document.getElementById('sudokuDraftToggle');b.classList.remove('active');b.textContent='✏️ 草稿';document.getElementById('sudokuHintCount').textContent='💡 提示: 0';this.resetTimer()}
+isComplete(){for(let r=0;r<9;r++)for(let c=0;c<9;c++){if(this.board[r][c]===0)return false;if(this.board[r][c]!==this.solution[r][c])return false}return true}
+finishGame(){this.stopTimer();const t=this.timerSeconds;const dl=this.getDifficultyConfig().label;const type=this.isDaily?'每日一题':dl;this.saveRecord({date:new Date().toISOString().split('T')[0],time:t,timeDisplay:this.formatTime(t),difficulty:type,hints:this.hintCount,isDaily:this.isDaily});setTimeout(()=>{const stars=t<180?'🌟🌟🌟':t<420?'🌟🌟':t<720?'🌟':'';alert('🎉 恭喜完成！\n📅 '+type+'\n⏱ 用时: '+this.formatTime(t)+'\n💡 提示: '+this.hintCount+' 次\n'+stars)},200)}
+saveRecord(rec){const k='sudoku_stats';let s=[];try{s=JSON.parse(localStorage.getItem(k)||'[]')}catch(e){s=[]}s.unshift(rec);if(s.length>50)s=s.slice(0,50);localStorage.setItem(k,JSON.stringify(s))}
+getStats(){try{return JSON.parse(localStorage.getItem('sudoku_stats')||'[]')}catch(e){return[]}}
+openStats(){const s=this.getStats();const m=document.getElementById('sudokuStatsModal');document.getElementById('statTotal').textContent=s.length;if(s.length>0){const ts=s.map(x=>x.time);const best=Math.min(...ts);const avg=Math.round(ts.reduce((a,b)=>a+b,0)/ts.length);document.getElementById('statBestTime').textContent=this.formatTime(best);document.getElementById('statAvgTime').textContent=this.formatTime(avg);const days=new Set(s.map(x=>x.date));const sd=[...days].sort().reverse();let streak=0;const today=new Date();for(let i=0;i<sd.length;i++){const exp=new Date(today);exp.setDate(today.getDate()-i);const es=exp.toISOString().split('T')[0];if(days.has(es))streak++;else if(i===0){const yd=new Date(today);yd.setDate(today.getDate()-1);const ys=yd.toISOString().split('T')[0];if(days.has(ys)){streak++;today.setDate(today.getDate()-1);i--;continue}break}else break}document.getElementById('statStreak').textContent=streak;const he=document.getElementById('statsHistory');he.innerHTML=s.slice(0,20).map(x=>'<div class="stat-record"><span class="rec-date">'+x.date+'</span><span class="rec-diff">'+x.difficulty+'</span><span class="rec-time">'+(x.timeDisplay||this.formatTime(x.time))+'</span><span>💡'+(x.hints||0)+'</span></div>').join('')}else{document.getElementById('statBestTime').textContent='--:--';document.getElementById('statAvgTime').textContent='--:--';document.getElementById('statStreak').textContent='0';document.getElementById('statsHistory').innerHTML='<p class="stats-empty">暂无记录，快去挑战吧！</p>'}m.classList.add('open')}
+closeStats(){document.getElementById('sudokuStatsModal').classList.remove('open')}
+giveHint(){const ec=[];for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(this.board[r][c]===0||this.board[r][c]!==this.solution[r][c])ec.push([r,c]);if(ec.length===0)return;this.startTimerIfNeeded();const[r,c]=ec[Math.floor(Math.random()*ec.length)];this.board[r][c]=this.solution[r][c];this.given[r][c]=true;this.drafts[r][c].clear();this.hintCount++;document.getElementById('sudokuHintCount').textContent='💡 提示: '+this.hintCount;this.render();const idx=r*9+c;const cell=this.boardEl.children[idx];if(cell){cell.classList.add('hint');setTimeout(()=>cell.classList.remove('hint'),600)}if(this.isComplete())this.finishGame()}
+selectCell(row,col){this.selectedRow=row;this.selectedCol=col;this.render()}
+render(){this.boardEl.innerHTML='';const sv=this.selectedRow!==-1?this.board[this.selectedRow]?.[this.selectedCol]:0;for(let r=0;r<9;r++){for(let c=0;c<9;c++){const cell=document.createElement('div');cell.className='sudoku-cell';if(this.given[r][c])cell.classList.add('given');if(this.board[r][c]!==0&&!this.given[r][c]&&this.board[r][c]!==this.solution[r][c])cell.classList.add('error');if(r===this.selectedRow&&c===this.selectedCol)cell.classList.add('selected');if(sv!==0&&this.board[r][c]===sv&&!(r===this.selectedRow&&c===this.selectedCol))cell.classList.add('same-number');if(this.board[r][c]!==0){cell.textContent=this.board[r][c]}else if(this.drafts[r][c].size>0){const dg=document.createElement('div');dg.className='draft-grid';for(let n=1;n<=9;n++){const dn=document.createElement('span');dn.className='draft-num';dn.textContent=this.drafts[r][c].has(n)?n:'';dg.appendChild(dn)}cell.appendChild(dg)}cell.addEventListener('click',()=>this.selectCell(r,c));this.boardEl.appendChild(cell)}}}}
+
+// ============ 围棋 ============
+class GoGame{constructor(){this.size=9;this.board=Array(this.size).fill(null).map(()=>Array(this.size).fill(0));this.currentPlayer=1;this.passes=0;this.captures={1:0,2:0};this.koPoint=null;this.canvas=document.getElementById('goBoard');this.ctx=this.canvas.getContext('2d');this.cellSize=60;this.padding=40;document.getElementById('goNewGame').addEventListener('click',()=>this.newGame());document.getElementById('goPass').addEventListener('click',()=>this.pass());this.canvas.addEventListener('click',e=>this.handleClick(e));this.newGame()}
+newGame(){this.board=Array(this.size).fill(null).map(()=>Array(this.size).fill(0));this.currentPlayer=1;this.passes=0;this.captures={1:0,2:0};this.koPoint=null;this.updateUI();this.draw()}
+handleClick(e){const rect=this.canvas.getBoundingClientRect();const scale=this.canvas.width/rect.width;const x=(e.clientX-rect.left)*scale;const y=(e.clientY-rect.top)*scale;const col=Math.round((x-this.padding)/this.cellSize);const row=Math.round((y-this.padding)/this.cellSize);if(row<0||row>=this.size||col<0||col>=this.size)return;if(this.board[row][col]!==0)return;if(this.koPoint&&this.koPoint.row===row&&this.koPoint.col===col)return;this.board[row][col]=this.currentPlayer;const opponent=this.currentPlayer===1?2:1;let capturedAny=false;this.koPoint=null;const neighbors=this.getNeighbors(row,col);for(const[nr,nc]of neighbors){if(this.board[nr][nc]===opponent){const group=this.getGroup(nr,nc);if(this.countLiberties(group)===0){capturedAny=true;for(const[gr,gc]of group){this.board[gr][gc]=0;this.captures[this.currentPlayer]++}if(group.length===1)this.koPoint={row:group[0][0],col:group[0][1]}}}}const myGroup=this.getGroup(row,col);if(this.countLiberties(myGroup)===0&&!capturedAny){this.board[row][col]=0;return}if(!capturedAny||this.countLiberties(this.getGroup(row,col))!==1){this.koPoint=null}else{if(this.koPoint&&this.countLiberties(myGroup)===1){const liberties=this.getLiberties(myGroup);if(liberties.length===1){const[lr,lc]=liberties[0];if(!(lr===this.koPoint.row&&lc===this.koPoint.col))this.koPoint=null}}}this.passes=0;this.currentPlayer=opponent;this.updateUI();this.draw()}
+getGroup(row,col){const color=this.board[row][col];const group=[];const visited=new Set();const stack=[[row,col]];while(stack.length>0){const[r,c]=stack.pop();const key=r+','+c;if(visited.has(key))continue;visited.add(key);group.push([r,c]);for(const[nr,nc]of this.getNeighbors(r,c)){if(this.board[nr][nc]===color&&!visited.has(nr+','+nc))stack.push([nr,nc])}}return group}
+countLiberties(group){return this.getLiberties(group).length}
+getLiberties(group){const liberties=new Set();for(const[r,c]of group){for(const[nr,nc]of this.getNeighbors(r,c)){if(this.board[nr][nc]===0)liberties.add(nr+','+nc)}}return[...liberties].map(s=>s.split(',').map(Number))}
+getNeighbors(row,col){const n=[];if(row>0)n.push([row-1,col]);if(row<this.size-1)n.push([row+1,col]);if(col>0)n.push([row,col-1]);if(col<this.size-1)n.push([row,col+1]);return n}
+pass(){this.passes++;if(this.passes>=2)this.endGame();else{this.currentPlayer=this.currentPlayer===1?2:1;this.updateUI();this.draw()}}
+endGame(){const bs=this.captures[1];const ws=this.captures[2]+6.5;let msg;if(bs>ws)msg='🏆 黑方胜！\n捕获: 黑 '+this.captures[1]+' vs 白 '+this.captures[2]+'\n白方贴目 6.5 目';else if(ws>bs)msg='🏆 白方胜！\n捕获: 黑 '+this.captures[1]+' vs 白 '+this.captures[2]+'\n白方贴目 6.5 目';else msg='🤝 平局！\n捕获: 黑 '+this.captures[1]+' vs 白 '+this.captures[2];setTimeout(()=>alert(msg),100);this.newGame()}
+updateUI(){document.getElementById('goTurn').textContent=this.currentPlayer===1?'⚫ 黑方回合':'⚪ 白方回合';document.getElementById('goScore').textContent='黑 '+this.captures[1]+' : '+this.captures[2]+' 白'}
+draw(){const ctx=this.ctx;const w=this.canvas.width;ctx.fillStyle='#dcb468';ctx.fillRect(0,0,w,w);ctx.strokeStyle='#333';ctx.lineWidth=1;for(let i=0;i<this.size;i++){const p=this.padding+i*this.cellSize;ctx.beginPath();ctx.moveTo(this.padding,p);ctx.lineTo(this.padding+(this.size-1)*this.cellSize,p);ctx.stroke();ctx.beginPath();ctx.moveTo(p,this.padding);ctx.lineTo(p,this.padding+(this.size-1)*this.cellSize);ctx.stroke()}const sp=[[2,2],[2,6],[4,4],[6,2],[6,6]];for(const[r,c]of sp){ctx.fillStyle='#333';ctx.beginPath();ctx.arc(this.padding+c*this.cellSize,this.padding+r*this.cellSize,4,0,Math.PI*2);ctx.fill()}for(let r=0;r<this.size;r++){for(let c=0;c<this.size;c++){if(this.board[r][c]===0)continue;const x=this.padding+c*this.cellSize;const y=this.padding+r*this.cellSize;const rad=this.cellSize*0.44;ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);if(this.board[r][c]===1){const g=ctx.createRadialGradient(x-3,y-3,2,x,y,rad);g.addColorStop(0,'#555');g.addColorStop(1,'#111');ctx.fillStyle=g}else{const g=ctx.createRadialGradient(x-3,y-3,2,x,y,rad);g.addColorStop(0,'#fff');g.addColorStop(1,'#ccc');ctx.fillStyle=g}ctx.fill();ctx.strokeStyle='#666';ctx.lineWidth=0.5;ctx.stroke()}}}}
+
+// ============ 2048 ============
+class Game2048{constructor(){this.size=4;this.grid=[];this.score=0;this.best=parseInt(localStorage.getItem('2048_best')||'0');this.boardEl=document.getElementById('tfeBoard');this.scoreEl=document.getElementById('tfeScore');this.bestEl=document.getElementById('tfeBest');document.getElementById('tfeNewGame').addEventListener('click',()=>this.newGame());this.bindKeys();this.newGame()}
+bindKeys(){document.addEventListener('keydown',e=>{if(!document.getElementById('game-2048').classList.contains('active'))return;switch(e.key){case'ArrowUp':e.preventDefault();this.move('up');break;case'ArrowDown':e.preventDefault();this.move('down');break;case'ArrowLeft':e.preventDefault();this.move('left');break;case'ArrowRight':e.preventDefault();this.move('right');break}});let sx=0,sy=0;this.boardEl.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});this.boardEl.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx;const dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)<20&&Math.abs(dy)<20)return;if(Math.abs(dx)>Math.abs(dy))this.move(dx>0?'right':'left');else this.move(dy>0?'down':'up')})}
+newGame(){this.grid=Array(this.size).fill(null).map(()=>Array(this.size).fill(0));this.score=0;this.addRandomTile();this.addRandomTile();this.updateUI()}
+addRandomTile(){const empty=[];for(let r=0;r<this.size;r++)for(let c=0;c<this.size;c++)if(this.grid[r][c]===0)empty.push([r,c]);if(empty.length===0)return;const[r,c]=empty[Math.floor(Math.random()*empty.length)];this.grid[r][c]=Math.random()<0.9?2:4}
+move(dir){const old=this.grid.map(r=>[...r]);this.grid=this.rotateForMove(dir);let moved=false;for(let r=0;r<this.size;r++){const{row,score,didMove}=this.mergeRow(this.grid[r]);this.grid[r]=row;this.score+=score;if(didMove)moved=true}this.grid=this.unrotateForMove(dir);if(moved){this.addRandomTile();this.updateUI();if(this.isGameOver())setTimeout(()=>alert('游戏结束！点击"新游戏"重新开始'),200)}}
+mergeRow(row){let arr=row.filter(v=>v!==0);let score=0;for(let i=0;i<arr.length-1;i++){if(arr[i]===arr[i+1]){arr[i]*=2;score+=arr[i];arr.splice(i+1,1)}}const nr=arr.concat(Array(this.size-arr.length).fill(0));const dm=row.some((v,i)=>v!==nr[i]);return{row:nr,score,didMove:dm}}
+rotateForMove(dir){let g=this.grid.map(r=>[...r]);if(dir==='left')return g;if(dir==='right')return g.map(r=>r.slice().reverse());if(dir==='up'){const r=Array(this.size).fill(null).map(()=>Array(this.size).fill(0));for(let i=0;i<this.size;i++)for(let j=0;j<this.size;j++)r[j][i]=g[i][j];return r}if(dir==='down'){const r=Array(this.size).fill(null).map(()=>Array(this.size).fill(0));for(let i=0;i<this.size;i++)for(let j=0;j<this.size;j++)r[this.size-1-j][i]=g[i][j];return r}return g}
+unrotateForMove(dir){let g=this.grid.map(r=>[...r]);if(dir==='left')return g;if(dir==='right')return g.map(r=>r.slice().reverse());if(dir==='up'){const r=Array(this.size).fill(null).map(()=>Array(this.size).fill(0));for(let i=0;i<this.size;i++)for(let j=0;j<this.size;j++)r[j][i]=g[i][j];return r}if(dir==='down'){const r=Array(this.size).fill(null).map(()=>Array(this.size).fill(0));for(let i=0;i<this.size;i++)for(let j=0;j<this.size;j++)r[j][this.size-1-i]=g[i][j];return r}return g}
+isGameOver(){for(let r=0;r<this.size;r++){for(let c=0;c<this.size;c++){if(this.grid[r][c]===0)return false;if(r<this.size-1&&this.grid[r][c]===this.grid[r+1][c])return false;if(c<this.size-1&&this.grid[r][c]===this.grid[r][c+1])return false}}return true}
+updateUI(){this.boardEl.innerHTML='';for(let r=0;r<this.size;r++){for(let c=0;c<this.size;c++){const cell=document.createElement('div');cell.className='tfe-cell';const v=this.grid[r][c];cell.textContent=v||'';if(v>0)cell.setAttribute('data-value',v);this.boardEl.appendChild(cell)}}this.scoreEl.textContent=this.score;if(this.score>this.best){this.best=this.score;localStorage.setItem('2048_best',this.best)}this.bestEl.textContent=this.best}}
+
+// ============ 扫雷 ============
+class Minesweeper{constructor(){this.difficulty='easy';this.configs={easy:{rows:9,cols:9,mines:10},medium:{rows:16,cols:16,mines:40},hard:{rows:16,cols:30,mines:99}};this.board=[];this.revealed=[];this.flagged=[];this.minePositions=new Set();this.gameOver=false;this.timerInterval=null;this.seconds=0;this.boardEl=document.getElementById('msBoard');document.getElementById('msNewGame').addEventListener('click',()=>this.newGame());document.getElementById('msDifficulty').addEventListener('change',e=>{this.difficulty=e.target.value;this.newGame()});this.newGame()}
+get config(){return this.configs[this.difficulty]}
+newGame(){const{rows,cols,mines}=this.config;this.gameOver=false;this.seconds=0;this.board=Array(rows).fill(null).map(()=>Array(cols).fill(0));this.revealed=Array(rows).fill(null).map(()=>Array(cols).fill(false));this.flagged=Array(rows).fill(null).map(()=>Array(cols).fill(false));this.minePositions=new Set();const pos=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)pos.push([r,c]);this.shuffle(pos);for(let i=0;i<mines;i++){const[r,c]=pos[i];this.minePositions.add(r+','+c);this.board[r][c]=-1}for(const key of this.minePositions){const[mr,mc]=key.split(',').map(Number);for(const[nr,nc]of this.getNeighbors(mr,mc))if(this.board[nr][nc]!==-1)this.board[nr][nc]++}this.updateUI();this.startTimer()}
+shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}}
+getNeighbors(row,col){const{rows,cols}=this.config;const n=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(dr===0&&dc===0)continue;const nr=row+dr,nc=col+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols)n.push([nr,nc])}return n}
+startTimer(){clearInterval(this.timerInterval);this.seconds=0;document.getElementById('msTimer').textContent='0';this.timerInterval=setInterval(()=>{if(!this.gameOver&&this.revealed.some(r=>r.some(c=>c))){this.seconds++;document.getElementById('msTimer').textContent=this.seconds}},1000)}
+handleClick(row,col,isRight){if(this.gameOver)return;if(isRight){if(!this.revealed[row][col]){this.flagged[row][col]=!this.flagged[row][col];this.updateUI()}return}if(this.flagged[row][col])return;if(this.revealed[row][col])return;if(this.minePositions.has(row+','+col)&&!this.revealed.some(r=>r.some(c=>c)))this.moveMine(row,col);if(this.minePositions.has(row+','+col)){this.revealAll();this.gameOver=true;clearInterval(this.timerInterval);this.updateUI();setTimeout(()=>alert('💥 踩雷了！游戏结束'),100);return}this.floodFill(row,col);this.updateUI();if(this.checkWin()){this.gameOver=true;clearInterval(this.timerInterval);this.updateUI();setTimeout(()=>alert('🎉 恭喜你赢了！\n用时: '+this.seconds+' 秒'),100)}}
+moveMine(row,col){const{rows,cols}=this.config;this.minePositions.delete(row+','+col);this.board[row][col]=0;for(const[nr,nc]of this.getNeighbors(row,col)){if(this.board[nr][nc]===-1)continue;this.board[nr][nc]=0;for(const[nnr,nnc]of this.getNeighbors(nr,nc))if(this.minePositions.has(nnr+','+nnc))this.board[nr][nc]++}for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(!this.minePositions.has(r+','+c)&&this.board[r][c]!==-1&&!(r===row&&c===col)){this.minePositions.add(r+','+c);this.board[r][c]=-1;for(const[nr,nc]of this.getNeighbors(r,c))if(this.board[nr][nc]!==-1)this.board[nr][nc]++;return}}
+floodFill(row,col){const{rows,cols}=this.config;if(row<0||row>=rows||col<0||col>=cols)return;if(this.revealed[row][col])return;if(this.flagged[row][col])return;this.revealed[row][col]=true;if(this.board[row][col]===0)for(const[nr,nc]of this.getNeighbors(row,col))if(!this.revealed[nr][nc]&&this.board[nr][nc]!==-1)this.floodFill(nr,nc)}
+revealAll(){const{rows,cols}=this.config;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(this.minePositions.has(r+','+c))this.revealed[r][c]=true}
+checkWin(){const{rows,cols}=this.config;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(!this.revealed[r][c]&&!this.minePositions.has(r+','+c))return false;return true}
+updateUI(){const{rows,cols,mines}=this.config;const fc=this.flagged.flat().filter(Boolean).length;document.getElementById('msMinesLeft').textContent=mines-fc;this.boardEl.style.gridTemplateColumns='repeat('+cols+', 30px)';this.boardEl.innerHTML='';for(let r=0;r<rows;r++){for(let c=0;c<cols;c++){const cell=document.createElement('div');cell.className='ms-cell';if(this.revealed[r][c]){cell.classList.add('revealed');if(this.minePositions.has(r+','+c)){cell.classList.add('mine');cell.textContent='💣'}else if(this.board[r][c]>0){cell.textContent=this.board[r][c];cell.setAttribute('data-count',this.board[r][c])}}else if(this.flagged[r][c]){cell.classList.add('flagged');cell.textContent='🚩'}const ri=r,ci=c;cell.addEventListener('click',()=>this.handleClick(ri,ci,false));cell.addEventListener('contextmenu',e=>{e.preventDefault();this.handleClick(ri,ci,true)});this.boardEl.appendChild(cell)}}}}
+
+// ============ 记忆翻牌 ============
+class MemoryGame{constructor(){this.cards=[];this.flipped=[];this.matched=new Set();this.moves=0;this.locked=false;this.emojis=['🍎','🍋','🍇','🍒','🌸','🌻','🐶','🐱'];this.boardEl=document.getElementById('memBoard');document.getElementById('memNewGame').addEventListener('click',()=>this.newGame());this.newGame()}
+newGame(){const p=[...this.emojis,...this.emojis];this.shuffle(p);this.cards=p;this.flipped=[];this.matched=new Set();this.moves=0;this.locked=false;this.updateUI();this.render()}
+shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}}
+handleClick(idx){if(this.locked)return;if(this.matched.has(idx))return;if(this.flipped.includes(idx))return;if(this.flipped.length>=2)return;this.flipped.push(idx);this.render();if(this.flipped.length===2){this.moves++;this.locked=true;const[a,b]=this.flipped;if(this.cards[a]===this.cards[b]){this.matched.add(a);this.matched.add(b);this.flipped=[];this.locked=false;this.updateUI();this.render();if(this.matched.size===this.cards.length)setTimeout(()=>alert('🎉 恭喜你赢了！\n总步数: '+this.moves),300)}else{setTimeout(()=>{this.flipped=[];this.locked=false;this.render()},600)}this.updateUI()}}
+updateUI(){document.getElementById('memMoves').textContent=this.moves;document.getElementById('memPairs').textContent=this.matched.size/2}
+render(){this.boardEl.innerHTML='';this.cards.forEach((emoji,idx)=>{const card=document.createElement('div');card.className='mem-card';if(this.flipped.includes(idx)||this.matched.has(idx))card.classList.add('flipped');if(this.matched.has(idx))card.classList.add('matched');card.innerHTML='<div class="mem-card-inner"><div class="mem-card-front">❓</div><div class="mem-card-back">'+emoji+'</div></div>';card.addEventListener('click',()=>this.handleClick(idx));this.boardEl.appendChild(card)})}}
+
+// ============ 滑块拼图 ============
+class PuzzleGame{constructor(){this.size=4;this.tiles=[];this.emptyIndex=15;this.moves=0;this.boardEl=document.getElementById('puzBoard');this.colors=['#6c5ce7','#a29bfe','#fd79a8','#e17055','#00b894','#00cec9','#0984e3','#6c5ce7','#fdcb6e','#e17055','#a29bfe','#00b894','#fd79a8','#0984e3','#fdcb6e','#636e72'];document.getElementById('puzNewGame').addEventListener('click',()=>this.newGame());document.getElementById('puzShuffle').addEventListener('click',()=>this.shuffleBoard());this.newGame();this.bindKeys()}
+bindKeys(){document.addEventListener('keydown',e=>{if(!document.getElementById('game-puzzle').classList.contains('active'))return;switch(e.key){case'ArrowUp':e.preventDefault();this.moveFrom(this.emptyIndex+this.size);break;case'ArrowDown':e.preventDefault();this.moveFrom(this.emptyIndex-this.size);break;case'ArrowLeft':e.preventDefault();this.moveFrom(this.emptyIndex+1);break;case'ArrowRight':e.preventDefault();this.moveFrom(this.emptyIndex-1);break}})}
+newGame(){this.tiles=Array.from({length:this.size*this.size-1},(_,i)=>i+1);this.tiles.push(0);this.emptyIndex=this.size*this.size-1;this.moves=0;this.render();this.updateUI()}
+shuffleBoard(){this.newGame();for(let i=0;i<200;i++){const vm=[];const row=Math.floor(this.emptyIndex/this.size);const col=this.emptyIndex%this.size;if(row>0)vm.push(this.emptyIndex-this.size);if(row<this.size-1)vm.push(this.emptyIndex+this.size);if(col>0)vm.push(this.emptyIndex-1);if(col<this.size-1)vm.push(this.emptyIndex+1);const move=vm[Math.floor(Math.random()*vm.length)];this.swap(this.emptyIndex,move);this.emptyIndex=move}this.moves=0;this.render();this.updateUI()}
+canMove(idx){const row=Math.floor(idx/this.size);const col=idx%this.size;const er=Math.floor(this.emptyIndex/this.size);const ec=this.emptyIndex%this.size;return Math.abs(row-er)+Math.abs(col-ec)===1}
+moveFrom(idx){if(idx<0||idx>=this.size*this.size)return;if(!this.canMove(idx))return;this.swap(idx,this.emptyIndex);this.emptyIndex=idx;this.moves++;this.render();this.updateUI();if(this.isSolved())setTimeout(()=>alert('🎉 恭喜你拼好了！\n总步数: '+this.moves),100)}
+swap(a,b){[this.tiles[a],this.tiles[b]]=[this.tiles[b],this.tiles[a]]}
+isSolved(){for(let i=0;i<this.size*this.size-1;i++)if(this.tiles[i]!==i+1)return false;return this.tiles[this.size*this.size-1]===0}
+updateUI(){document.getElementById('puzMoves').textContent=this.moves}
+render(){this.boardEl.innerHTML='';this.tiles.forEach((tile,idx)=>{const cell=document.createElement('div');cell.className='puz-tile';if(tile===0){cell.classList.add('empty')}else{cell.textContent=tile;cell.style.background=this.colors[tile-1];cell.addEventListener('click',()=>this.moveFrom(idx))}this.boardEl.appendChild(cell)})}}
+
+// ============ 主控 ============
+(function(){'use strict';let games={};function init(){document.querySelectorAll('.game-nav-item').forEach(item=>{item.addEventListener('click',()=>{const gid=item.getAttribute('data-game');switchGame(gid)})});const mt=document.getElementById('menuToggle');const sb=document.getElementById('sidebar');const ov=document.createElement('div');ov.className='overlay';document.body.appendChild(ov);mt.addEventListener('click',()=>{sb.classList.toggle('open');ov.classList.toggle('active')});ov.addEventListener('click',()=>{sb.classList.remove('open');ov.classList.remove('active')});document.querySelectorAll('.game-nav-item').forEach(item=>{item.addEventListener('click',()=>{if(window.innerWidth<=768){sb.classList.remove('open');ov.classList.remove('active')}})});switchGame('sudoku')}
+function switchGame(gid){document.querySelectorAll('.game-nav-item').forEach(item=>{item.classList.toggle('active',item.getAttribute('data-game')===gid)});document.querySelectorAll('.game-panel').forEach(p=>p.classList.remove('active'));const panel=document.getElementById('game-'+gid);if(panel)panel.classList.add('active');if(!games[gid])initGame(gid)}
+function initGame(gid){switch(gid){case'sudoku':games.sudoku=new SudokuGame();break;case'go':games.go=new GoGame();break;case'2048':games.game2048=new Game2048();break;case'minesweeper':games.minesweeper=new Minesweeper();break;case'memory':games.memory=new MemoryGame();break;case'puzzle':games.puzzle=new PuzzleGame();break}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init()})();
+</script>
+</body>
+</html>
