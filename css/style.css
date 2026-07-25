@@ -420,6 +420,26 @@ body {
     border-radius: 16px;
 }
 
+.btn-start {
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    font-weight: 700;
+}
+
+.btn-start:hover {
+    background: #219a52;
+    transform: translateY(-1px);
+}
+
+.btn-start.paused {
+    background: #f39c12;
+}
+
+.btn-start.paused:hover {
+    background: #e67e22;
+}
+
 .btn-draft {
     background: transparent;
     color: var(--text-light);

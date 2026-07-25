@@ -22,7 +22,9 @@ class SudokuGame {
         this.timerSeconds = 0;
         this.timerInterval = null;
         this.timerRunning = false;
-        this.started = false; // 是否已经开始填数字
+        this.timerPaused = false;
+        this.started = false;  // 用户是否点了开始
+        this.firstInput = false; // 是否已经开始填数字
 
         // 提示计数 & 错误次数
         this.hintCount = 0;
@@ -37,6 +39,7 @@ class SudokuGame {
         document.getElementById('sudokuDaily').addEventListener('click', () => this.loadDaily());
         document.getElementById('sudokuHint').addEventListener('click', () => this.giveHint());
         document.getElementById('sudokuDraftToggle').addEventListener('click', () => this.toggleDraftMode());
+        document.getElementById('sudokuTimerBtn').addEventListener('click', () => this.toggleTimer());
         document.getElementById('sudokuStatsBtn').addEventListener('click', () => this.openStats());
         document.getElementById('statsClose').addEventListener('click', () => this.closeStats());
         document.querySelector('.stats-overlay').addEventListener('click', () => this.closeStats());
@@ -163,7 +166,8 @@ class SudokuGame {
     toggleDraft(row, col, num) {
         if (row < 0 || col < 0) return;
         if (this.given[row][col]) return;
-        if (this.board[row][col] !== 0) return; // 已填数字的格子不写草稿
+        if (this.board[row][col] !== 0) return;
+        if (!this.started || this.timerPaused) return; // 未开始或暂停中禁止操作 // 已填数字的格子不写草稿
 
         if (this.drafts[row][col].has(num)) {
             this.drafts[row][col].delete(num);
@@ -185,6 +189,7 @@ class SudokuGame {
     placeNumber(num) {
         if (this.selectedRow === -1) return;
         if (this.given[this.selectedRow][this.selectedCol]) return;
+        if (!this.started || this.timerPaused) return; // 未开始或暂停中禁止操作
 
         this.board[this.selectedRow][this.selectedCol] = num;
         // 清除该格草稿
@@ -205,20 +210,54 @@ class SudokuGame {
     }
 
     startTimerIfNeeded() {
-        if (!this.started) {
-            this.started = true;
-            this.startTimer();
+        if (!this.started) return; // 没点开始不计时
+        if (!this.firstInput) {
+            this.firstInput = true;
         }
     }
 
-    // ============ 计时器 ============
+    // ============ 计时器：开始/暂停/继续 ============
+    toggleTimer() {
+        if (!this.started) {
+            // 第一次点：开始
+            this.started = true;
+            this.startTimer();
+            this.updateTimerBtn();
+        } else if (this.timerRunning) {
+            // 正在计时 → 暂停
+            this.pauseTimer();
+        } else {
+            // 已暂停 → 继续
+            this.resumeTimer();
+        }
+    }
+
     startTimer() {
-        if (this.timerRunning) return;
         this.timerRunning = true;
+        this.timerPaused = false;
         this.timerSeconds = 0;
         this.updateTimerDisplay();
         document.getElementById('sudokuTimerDisplay').classList.add('running');
+        this.timerInterval = setInterval(() => {
+            this.timerSeconds++;
+            this.updateTimerDisplay();
+        }, 1000);
+    }
 
+    pauseTimer() {
+        this.timerRunning = false;
+        this.timerPaused = true;
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+        document.getElementById('sudokuTimerDisplay').classList.remove('running');
+        this.updateTimerBtn();
+    }
+
+    resumeTimer() {
+        this.timerRunning = true;
+        this.timerPaused = false;
+        document.getElementById('sudokuTimerDisplay').classList.add('running');
+        this.updateTimerBtn();
         this.timerInterval = setInterval(() => {
             this.timerSeconds++;
             this.updateTimerDisplay();
@@ -227,6 +266,7 @@ class SudokuGame {
 
     stopTimer() {
         this.timerRunning = false;
+        this.timerPaused = false;
         clearInterval(this.timerInterval);
         this.timerInterval = null;
         document.getElementById('sudokuTimerDisplay').classList.remove('running');
@@ -236,8 +276,24 @@ class SudokuGame {
         this.stopTimer();
         this.timerSeconds = 0;
         this.started = false;
+        this.firstInput = false;
         document.getElementById('sudokuTimerDisplay').classList.remove('running');
         this.updateTimerDisplay();
+        this.updateTimerBtn();
+    }
+
+    updateTimerBtn() {
+        const btn = document.getElementById('sudokuTimerBtn');
+        if (!this.started) {
+            btn.textContent = '▶ 开始';
+            btn.classList.remove('paused');
+        } else if (this.timerPaused) {
+            btn.textContent = '▶ 继续';
+            btn.classList.add('paused');
+        } else {
+            btn.textContent = '⏸ 暂停';
+            btn.classList.remove('paused');
+        }
     }
 
     updateTimerDisplay() {
@@ -366,6 +422,8 @@ class SudokuGame {
         btn.textContent = '✏️ 草稿';
         document.getElementById('sudokuHintCount').textContent = '💡 提示: 0';
         document.getElementById('sudokuErrorCount').textContent = '❌ 错误: 0';
+        document.getElementById('sudokuTimerBtn').textContent = '▶ 开始';
+        document.getElementById('sudokuTimerBtn').classList.remove('paused');
         this.resetTimer();
     }
 
@@ -506,6 +564,7 @@ class SudokuGame {
             }
         }
         if (emptyCells.length === 0) return;
+        if (!this.started || this.timerPaused) return; // 未开始或暂停中禁止操作
 
         this.startTimerIfNeeded();
 
