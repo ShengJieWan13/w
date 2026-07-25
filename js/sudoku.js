@@ -24,8 +24,9 @@ class SudokuGame {
         this.timerRunning = false;
         this.started = false; // 是否已经开始填数字
 
-        // 提示计数
+        // 提示计数 & 错误次数
         this.hintCount = 0;
+        this.errorCount = 0;
 
         // DOM 元素
         this.boardEl = document.getElementById('sudokuBoard');
@@ -189,6 +190,12 @@ class SudokuGame {
         // 清除该格草稿
         this.drafts[this.selectedRow][this.selectedCol].clear();
 
+        // 错误计数：填了非零数字但与答案不符
+        if (num !== 0 && num !== this.solution[this.selectedRow][this.selectedCol]) {
+            this.errorCount++;
+            document.getElementById('sudokuErrorCount').textContent = `❌ 错误: ${this.errorCount}`;
+        }
+
         this.startTimerIfNeeded();
         this.render();
 
@@ -351,12 +358,14 @@ class SudokuGame {
         this.selectedRow = -1;
         this.selectedCol = -1;
         this.hintCount = 0;
+        this.errorCount = 0;
         this.drafts = Array(9).fill(null).map(() => Array(9).fill(null).map(() => new Set()));
         this.draftMode = false;
         const btn = document.getElementById('sudokuDraftToggle');
         btn.classList.remove('active');
         btn.textContent = '✏️ 草稿';
         document.getElementById('sudokuHintCount').textContent = '💡 提示: 0';
+        document.getElementById('sudokuErrorCount').textContent = '❌ 错误: 0';
         this.resetTimer();
     }
 
@@ -384,12 +393,13 @@ class SudokuGame {
             timeDisplay: this.formatTime(time),
             difficulty: type,
             hints: this.hintCount,
+            errors: this.errorCount,
             isDaily: this.isDaily,
         });
 
         setTimeout(() => {
             const stars = time < 180 ? '🌟🌟🌟' : time < 420 ? '🌟🌟' : time < 720 ? '🌟' : '';
-            alert(`🎉 恭喜完成！\n📅 ${type}\n⏱ 用时: ${this.formatTime(time)}\n💡 提示: ${this.hintCount} 次\n${stars}`);
+            alert(`🎉 恭喜完成！\n📅 ${type}\n⏱ 用时: ${this.formatTime(time)}\n💡 提示: ${this.hintCount} 次\n❌ 错误: ${this.errorCount} 次\n${stars}`);
         }, 200);
     }
 
@@ -467,6 +477,7 @@ class SudokuGame {
                     <span class="rec-diff">${s.difficulty}</span>
                     <span class="rec-time">${s.timeDisplay || this.formatTime(s.time)}</span>
                     <span>💡${s.hints || 0}</span>
+                    <span>❌${s.errors || 0}</span>
                 </div>
             `).join('');
         } else {
