@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>益智游戏 - 简约游戏空间</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">🎯 益智空间</h1>
+                <p class="subtitle">静心 · 思考 · 挑战</p>
+            </div>
+            <nav class="game-nav">
+                <button class="game-nav-item active" data-game="sudoku">
+                    <span class="nav-icon">🧩</span>
+                    <span class="nav-text">数独</span>
+                    <span class="nav-desc">经典数字逻辑</span>
+                </button>
+                <button class="game-nav-item" data-game="go">
+                    <span class="nav-icon">⚫</span>
+                    <span class="nav-text">围棋</span>
+                    <span class="nav-desc">黑白博弈对弈</span>
+                </button>
+                <button class="game-nav-item" data-game="2048">
+                    <span class="nav-icon">🔢</span>
+                    <span class="nav-text">2048</span>
+                    <span class="nav-desc">数字合成挑战</span>
+                </button>
+                <button class="game-nav-item" data-game="minesweeper">
+                    <span class="nav-icon">💣</span>
+                    <span class="nav-text">扫雷</span>
+                    <span class="nav-desc">逻辑推理排雷</span>
+                </button>
+                <button class="game-nav-item" data-game="memory">
+                    <span class="nav-icon">🃏</span>
+                    <span class="nav-text">记忆翻牌</span>
+                    <span class="nav-desc">记忆力大考验</span>
+                </button>
+                <button class="game-nav-item" data-game="puzzle">
+                    <span class="nav-icon">🖼️</span>
+                    <span class="nav-text">滑块拼图</span>
+                    <span class="nav-desc">图片复原挑战</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <p>无广告 · 纯享版</p>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main">
+            <!-- 移动端菜单按钮 -->
+            <button class="menu-toggle" id="menuToggle" aria-label="菜单">
+                <span></span><span></span><span></span>
+            </button>
+
+            <!-- 游戏容器 -->
+            <div class="game-container" id="gameContainer">
+                <!-- 数独 -->
+                <div class="game-panel active" id="game-sudoku">
+                    <div class="game-header">
+                        <h2>数独 Sudoku</h2>
+                        <div class="game-controls">
+                            <select id="sudokuDifficulty" class="select-sm">
+                                <option value="easy">简单</option>
+                                <option value="medium" selected>中等</option>
+                                <option value="hard">困难</option>
+                            </select>
+                            <button class="btn btn-primary" id="sudokuNewGame">新游戏</button>
+                            <button class="btn btn-outline" id="sudokuHint">提示</button>
+                        </div>
+                    </div>
+                    <div class="sudoku-board" id="sudokuBoard"></div>
+                    <div class="sudoku-numpad" id="sudokuNumpad"></div>
+                </div>
+
+                <!-- 围棋 -->
+                <div class="game-panel" id="game-go">
+                    <div class="game-header">
+                        <h2>围棋 Go</h2>
+                        <div class="game-controls">
+                            <span class="turn-indicator" id="goTurn">⚫ 黑方回合</span>
+                            <span class="score" id="goScore">黑 0 : 0 白</span>
+                            <button class="btn btn-outline" id="goPass">弃权</button>
+                            <button class="btn btn-primary" id="goNewGame">新游戏</button>
+                        </div>
+                    </div>
+                    <div class="go-board-wrapper">
+                        <canvas id="goBoard" width="540" height="540"></canvas>
+                    </div>
+                </div>
+
+                <!-- 2048 -->
+                <div class="game-panel" id="game-2048">
+                    <div class="game-header">
+                        <h2>2048</h2>
+                        <div class="game-controls">
+                            <span class="score-display">🏆 <strong id="tfeScore">0</strong></span>
+                            <span class="score-display">⭐ <strong id="tfeBest">0</strong></span>
+                            <button class="btn btn-primary" id="tfeNewGame">新游戏</button>
+                        </div>
+                    </div>
+                    <div class="tfe-board" id="tfeBoard"></div>
+                    <p class="game-hint">使用方向键 ↑↓←→ 或滑动操作</p>
+                </div>
+
+                <!-- 扫雷 -->
+                <div class="game-panel" id="game-minesweeper">
+                    <div class="game-header">
+                        <h2>扫雷 Minesweeper</h2>
+                        <div class="game-controls">
+                            <select id="msDifficulty" class="select-sm">
+                                <option value="easy" selected>初级 (9×9)</option>
+                                <option value="medium">中级 (16×16)</option>
+                                <option value="hard">高级 (30×16)</option>
+                            </select>
+                            <span class="mine-count">💣 <strong id="msMinesLeft">10</strong></span>
+                            <span class="timer">⏱ <strong id="msTimer">0</strong>s</span>
+                            <button class="btn btn-primary" id="msNewGame">新游戏</button>
+                        </div>
+                    </div>
+                    <div class="ms-board" id="msBoard"></div>
+                </div>
+
+                <!-- 记忆翻牌 -->
+                <div class="game-panel" id="game-memory">
+                    <div class="game-header">
+                        <h2>记忆翻牌 Memory</h2>
+                        <div class="game-controls">
+                            <span class="score-display">🔄 <strong id="memMoves">0</strong> 步</span>
+                            <span class="score-display">✅ <strong id="memPairs">0</strong>/8</span>
+                            <button class="btn btn-primary" id="memNewGame">新游戏</button>
+                        </div>
+                    </div>
+                    <div class="memory-board" id="memBoard"></div>
+                </div>
+
+                <!-- 滑块拼图 -->
+                <div class="game-panel" id="game-puzzle">
+                    <div class="game-header">
+                        <h2>滑块拼图 Sliding Puzzle</h2>
+                        <div class="game-controls">
+                            <span class="score-display">🔄 <strong id="puzMoves">0</strong> 步</span>
+                            <button class="btn btn-outline" id="puzShuffle">打乱</button>
+                            <button class="btn btn-primary" id="puzNewGame">新游戏</button>
+                        </div>
+                    </div>
+                    <div class="puzzle-board" id="puzBoard"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/sudoku.js"></script>
+    <script src="js/go.js"></script>
+    <script src="js/game2048.js"></script>
+    <script src="js/minesweeper.js"></script>
+    <script src="js/memory.js"></script>
+    <script src="js/puzzle.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
