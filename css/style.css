@@ -605,6 +605,137 @@ body {
 }
 
 /* === 围棋 === */
+.go-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border-radius: 22px;
+    padding: 4px;
+}
+
+.go-tab {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-light);
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.go-tab.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(108,92,231,0.3);
+}
+
+.go-tab:hover:not(.active) {
+    color: var(--text);
+    background: rgba(108,92,231,0.06);
+}
+
+.go-sub-panel {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.go-sub-panel.active {
+    display: flex;
+}
+
+.go-controls-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* 胜率条 */
+.go-winrate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.wr-bar {
+    width: 160px;
+    height: 8px;
+    border-radius: 4px;
+    background: #ddd;
+    overflow: hidden;
+    display: flex;
+}
+
+.wr-fill {
+    height: 100%;
+    background: #333;
+    transition: width 0.5s ease;
+}
+
+.wr-text {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.wr-text strong {
+    color: var(--text);
+}
+
+/* 残局练习 */
+.practice-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.practice-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.practice-desc {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.practice-nav {
+    display: flex;
+    gap: 8px;
+}
+
+.practice-result {
+    font-size: 1rem;
+    font-weight: 700;
+    min-height: 28px;
+}
+
+.practice-result.success { color: #27ae60; }
+.practice-result.fail { color: #e74c3c; }
+
+/* AI 提示显示 */
+.go-hint-display {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    text-align: center;
+}
+
 .go-board-wrapper {
     background: var(--bg-card);
     border-radius: var(--radius);

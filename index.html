@@ -125,15 +125,76 @@
                 <div class="game-panel" id="game-go">
                     <div class="game-header">
                         <h2>围棋 Go</h2>
-                        <div class="game-controls">
-                            <span class="turn-indicator" id="goTurn">⚫ 黑方回合</span>
-                            <span class="score" id="goScore">黑 0 : 0 白</span>
-                            <button class="btn btn-outline" id="goPass">弃权</button>
-                            <button class="btn btn-primary" id="goNewGame">新游戏</button>
+                        <div class="go-tabs">
+                            <button class="go-tab active" data-gotab="practice">📚 残局练习</button>
+                            <button class="go-tab" data-gotab="ai">🤖 AI 对战</button>
+                            <button class="go-tab" data-gotab="pvp">👥 双人对弈</button>
                         </div>
                     </div>
-                    <div class="go-board-wrapper">
-                        <canvas id="goBoard" width="540" height="540"></canvas>
+
+                    <!-- 残局练习面板 -->
+                    <div class="go-sub-panel active" id="goPanelPractice">
+                        <div class="practice-header">
+                            <span class="practice-title" id="practiceTitle">题目 1/12</span>
+                            <span class="practice-desc" id="practiceDesc">黑先，请吃掉白棋</span>
+                            <div class="practice-nav">
+                                <button class="btn btn-sm btn-outline" id="goPrevPuzzle">◀ 上一题</button>
+                                <button class="btn btn-sm btn-outline" id="goNextPuzzle">下一题 ▶</button>
+                                <button class="btn btn-sm btn-outline" id="goResetPuzzle">🔄 重置</button>
+                            </div>
+                            <span class="practice-result" id="practiceResult"></span>
+                        </div>
+                        <div class="go-board-wrapper">
+                            <canvas id="goPracticeBoard" width="540" height="540"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- AI 对战面板 -->
+                    <div class="go-sub-panel" id="goPanelAI">
+                        <div class="go-controls-row">
+                            <span class="turn-indicator" id="goAITurn">🤖 AI 思考中...</span>
+                            <div class="go-winrate" id="goWinRate">
+                                <span class="wr-bar"><span class="wr-fill" id="wrBlackBar" style="width:50%"></span></span>
+                                <span class="wr-text">⚫ <strong id="wrBlack">50%</strong> : <strong id="wrWhite">50%</strong> ⚪</span>
+                            </div>
+                        </div>
+                        <div class="go-controls-row">
+                            <span class="score" id="goAIScore">黑 0 : 0 白</span>
+                            <select id="goBoardSize" class="select-sm">
+                                <option value="9">9×9 棋盘</option>
+                                <option value="13" selected>13×13 棋盘</option>
+                                <option value="19">19×19 棋盘</option>
+                            </select>
+                            <select id="goAIColor" class="select-sm">
+                                <option value="black">我执黑</option>
+                                <option value="white" selected>我执白</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline" id="goAIHint">💡 AI 提示</button>
+                            <button class="btn btn-sm btn-outline" id="goAIPass">弃权</button>
+                            <button class="btn btn-sm btn-primary" id="goAINewGame">新游戏</button>
+                        </div>
+                        <div class="go-hint-display" id="goHintDisplay" style="display:none"></div>
+                        <div class="go-board-wrapper">
+                            <canvas id="goAIBoard" width="650" height="650"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 双人对弈面板 -->
+                    <div class="go-sub-panel" id="goPanelPVP">
+                        <div class="go-controls-row">
+                            <span class="turn-indicator" id="goPVPTurn">⚫ 黑方回合</span>
+                            <span class="score" id="goPVPScore">黑 0 : 0 白</span>
+                            <select id="goPVPSize" class="select-sm">
+                                <option value="9" selected>9×9</option>
+                                <option value="13">13×13</option>
+                                <option value="19">19×19</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline" id="goPVPPass">弃权</button>
+                            <button class="btn btn-sm btn-primary" id="goPVPNewGame">新游戏</button>
+                        </div>
+                        <div class="go-board-wrapper">
+                            <canvas id="goPVPBoard" width="540" height="540"></canvas>
+                        </div>
                     </div>
                 </div>
 
