@@ -2162,49 +2162,10 @@ class GoBoard {
     }
 }
 
-// ==================== Go AI（Monte Carlo 模拟） ====================
+// ==================== Go AI（轻量 Monte Carlo） ====================
 class GoAI {
     constructor(boardObj) {
         this.boardObj = boardObj;
-        this.playoutCount = 100; // 默认模拟次数
-    }
-
-    // 获取所有合法落子
-    getLegalMoves(board, color, koPoint) {
-        const size = board.length;
-        const moves = [];
-        for (let r = 0; r < size; r++) {
-            for (let c = 0; c < size; c++) {
-                if (board[r][c] !== 0) continue;
-                if (koPoint && koPoint[0] === r && koPoint[1] === c) continue;
-                // 快速检查自杀
-                const testBoard = board.map(row => [...row]);
-                testBoard[r][c] = color;
-                if (this.isSuicide(testBoard, r, c, color)) continue;
-                moves.push([r, c]);
-            }
-        }
-        // 打乱顺序
-        for (let i = moves.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [moves[i], moves[j]] = [moves[j], moves[i]];
-        }
-        return moves;
-    }
-
-    isSuicide(board, row, col, color) {
-        const opponent = color === 1 ? 2 : 1;
-        const neighbors = this.getNeighbors(board, row, col);
-        // 如果吃掉对方子，不是自杀
-        for (const [nr, nc] of neighbors) {
-            if (board[nr][nc] === opponent) {
-                const group = this.getGroup(board, nr, nc);
-                if (this.countLiberties(board, group) === 0) return false;
-            }
-        }
-        // 检查自己
-        const myGroup = this.getGroup(board, row, col);
-        return this.countLiberties(board, myGroup) === 0;
     }
 
     getNeighbors(board, row, col) {
@@ -2225,14 +2186,12 @@ class GoAI {
         const stack = [[row, col]];
         while (stack.length > 0) {
             const [r, c] = stack.pop();
-            const key = `${r},${c}`;
+            const key = r + ',' + c;
             if (visited.has(key)) continue;
             visited.add(key);
             group.push([r, c]);
             for (const [nr, nc] of this.getNeighbors(board, r, c)) {
-                if (board[nr][nc] === color && !visited.has(`${nr},${nc}`)) {
-                    stack.push([nr, nc]);
-                }
+                if (board[nr][nc] === color && !visited.has(nr + ',' + nc)) stack.push([nr, nc]);
             }
         }
         return group;
@@ -2242,172 +2201,178 @@ class GoAI {
         const liberties = new Set();
         for (const [r, c] of group) {
             for (const [nr, nc] of this.getNeighbors(board, r, c)) {
-                if (board[nr][nc] === 0) liberties.add(`${nr},${nc}`);
+                if (board[nr][nc] === 0) liberties.add(nr + ',' + nc);
             }
         }
         return liberties.size;
     }
 
-    // 在棋盘上落子，返回 [新棋盘, 提子数, 新打劫点]
-    playMove(board, row, col, color, koPoint) {
-        const newBoard = board.map(r => [...r]);
-        newBoard[row][col] = color;
+    isSuicide(board, row, col, color) {
         const opponent = color === 1 ? 2 : 1;
-        let captures = 0;
-        let newKo = null;
-
-        for (const [nr, nc] of this.getNeighbors(newBoard, row, col)) {
-            if (newBoard[nr][nc] === opponent) {
-                const group = this.getGroup(newBoard, nr, nc);
-                if (this.countLiberties(newBoard, group) === 0) {
-                    captures += group.length;
-                    for (const [gr, gc] of group) newBoard[gr][gc] = 0;
-                    if (group.length === 1) newKo = [group[0][0], group[0][1]];
-                }
+        for (const [nr, nc] of this.getNeighbors(board, row, col)) {
+            if (board[nr][nc] === opponent) {
+                if (this.countLiberties(board, this.getGroup(board, nr, nc)) === 0) return false;
             }
         }
-
-        // 检查是否形成有效打劫
-        if (newKo && captures === 1) {
-            const myGroup = this.getGroup(newBoard, row, col);
-            if (this.countLiberties(newBoard, myGroup) !== 1) newKo = null;
-        } else {
-            newKo = null;
-        }
-
-        return { board: newBoard, captures, koPoint: newKo };
+        board[row][col] = color;
+        const alive = this.countLiberties(board, this.getGroup(board, row, col)) > 0;
+        board[row][col] = 0;
+        return !alive;
     }
 
-    // 启发式随机模拟一局
-    simulateRandomGame(board, startColor, koPoint) {
-        let simBoard = board.map(r => [...r]);
-        let currentColor = startColor;
-        let simKo = koPoint ? [...koPoint] : null;
-        let passes = 0;
-        const maxMoves = board.length * board.length * 2;
-
-        for (let moveNum = 0; moveNum < maxMoves; moveNum++) {
-            const moves = this.getLegalMoves(simBoard, currentColor, simKo);
-
-            // 启发式：优先在已有棋子附近落子
-            const nearMoves = moves.filter(([r, c]) => this.hasNeighbor(simBoard, r, c));
-            const candidates = nearMoves.length > 0 ? nearMoves : moves;
-
-            if (candidates.length === 0) {
-                passes++;
-                if (passes >= 2) break;
-                currentColor = currentColor === 1 ? 2 : 1;
-                simKo = null;
-                continue;
-            }
-
-            passes = 0;
-            const [r, c] = candidates[Math.floor(Math.random() * candidates.length)];
-            const result = this.playMove(simBoard, r, c, currentColor, simKo);
-            simBoard = result.board;
-            simKo = result.koPoint;
-            currentColor = currentColor === 1 ? 2 : 1;
-        }
-
-        // 简易计分：数子
-        let blackScore = 0, whiteScore = 0;
-        const visited = new Set();
-        const size = simBoard.length;
-
-        for (let r = 0; r < size; r++) {
-            for (let c = 0; c < size; c++) {
-                if (simBoard[r][c] === 1) blackScore++;
-                else if (simBoard[r][c] === 2) whiteScore++;
-                else if (!visited.has(`${r},${c}`)) {
-                    // 空地 —— 判断属于谁
-                    const territory = this.floodEmpty(simBoard, r, c, visited);
-                    const owners = new Set();
-                    for (const [er, ec] of territory) {
-                        for (const [nr, nc] of this.getNeighbors(simBoard, er, ec)) {
-                            if (simBoard[nr][nc] !== 0) owners.add(simBoard[nr][nc]);
-                        }
-                    }
-                    if (owners.size === 1) {
-                        if (owners.has(1)) blackScore += territory.length;
-                        else if (owners.has(2)) whiteScore += territory.length;
-                    }
-                }
-            }
-        }
-
-        whiteScore += 6.5; // 贴目
-        return blackScore > whiteScore ? 1 : (whiteScore > blackScore ? 2 : 0);
-    }
-
-    floodEmpty(board, row, col, visited) {
-        const territory = [];
-        const stack = [[row, col]];
-        const size = board.length;
-        while (stack.length > 0) {
-            const [r, c] = stack.pop();
-            const key = `${r},${c}`;
-            if (visited.has(key)) continue;
-            if (board[r][c] !== 0) continue;
-            visited.add(key);
-            territory.push([r, c]);
-            for (const [nr, nc] of this.getNeighbors(board, r, c)) {
-                if (board[nr][nc] === 0 && !visited.has(`${nr},${nc}`)) {
-                    stack.push([nr, nc]);
-                }
-            }
-        }
-        return territory;
-    }
-
-    hasNeighbor(board, row, col) {
+    hasNearby(board, row, col) {
         for (const [nr, nc] of this.getNeighbors(board, row, col)) {
             if (board[nr][nc] !== 0) return true;
-            // 两格以内也算"附近"
-            for (const [nnr, nnc] of this.getNeighbors(board, nr, nc)) {
-                if (board[nnr][nnc] !== 0) return true;
+            for (const [nr2, nc2] of this.getNeighbors(board, nr, nc)) {
+                if (board[nr2][nc2] !== 0) return true;
             }
         }
         return false;
     }
 
-    // 评估所有合法落子的胜率
-    evaluateMoves(board, color, koPoint, numPlayouts) {
-        const moves = this.getLegalMoves(board, color, koPoint);
-        if (moves.length === 0) return [];
-
-        const n = numPlayouts || this.playoutCount;
-        const results = [];
-
-        for (const [r, c] of moves) {
-            const result = this.playMove(board, r, c, color, koPoint);
-            let wins = 0;
-            const opponent = color === 1 ? 2 : 1;
-
-            for (let i = 0; i < n; i++) {
-                const winner = this.simulateRandomGame(result.board, opponent, result.koPoint);
-                if (winner === color) wins++;
+    // 获取候选落子（只取附近有棋子的空位 + 随机采样）
+    getCandidateMoves(board, color, koPoint, maxCandidates) {
+        const size = board.length;
+        const nearMoves = [];
+        const farMoves = [];
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                if (board[r][c] !== 0) continue;
+                if (koPoint && koPoint[0] === r && koPoint[1] === c) continue;
+                if (this.hasNearby(board, r, c)) {
+                    nearMoves.push([r, c]);
+                } else {
+                    farMoves.push([r, c]);
+                }
             }
-            results.push({ row: r, col: c, winRate: wins / n, wins, total: n });
+        }
+        // 洗牌
+        const shuffle = (arr) => {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        };
+        shuffle(nearMoves);
+        shuffle(farMoves);
+        // 合并：附近棋子优先，限制总数
+        let candidates = nearMoves.concat(farMoves);
+        const limit = maxCandidates || (size <= 9 ? 30 : 20);
+        if (candidates.length > limit) candidates = candidates.slice(0, limit);
+
+        // 过滤自杀
+        return candidates.filter(([r, c]) => !this.isSuicide(board, r, c, color));
+    }
+
+    // 快速模拟一局（限制步数）
+    quickSim(board, startColor, koPoint, maxSteps) {
+        const size = board.length;
+        let simBoard = board.map(r => [...r]);
+        let color = startColor;
+        let ko = koPoint ? [koPoint[0], koPoint[1]] : null;
+        let passes = 0;
+        const steps = maxSteps || Math.min(50, size * 3);
+
+        for (let s = 0; s < steps; s++) {
+            // 简单取合法落子（不复制棋盘）
+            const legals = [];
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (simBoard[r][c] !== 0) continue;
+                    if (ko && ko[0] === r && ko[1] === c) continue;
+                    if (this.isSuicide(simBoard, r, c, color)) continue;
+                    legals.push([r, c]);
+                }
+            }
+            // 只在附近有棋子的位置中选
+            const near = legals.filter(([r, c]) => this.hasNearby(simBoard, r, c));
+            const picks = near.length > 0 ? near : legals;
+
+            if (picks.length === 0) {
+                passes++;
+                if (passes >= 2) break;
+                color = color === 1 ? 2 : 1;
+                ko = null;
+                continue;
+            }
+            passes = 0;
+            const [r, c] = picks[Math.floor(Math.random() * picks.length)];
+
+            // 执行落子 + 提子
+            simBoard[r][c] = color;
+            const opp = color === 1 ? 2 : 1;
+            let newKo = null;
+            for (const [nr, nc] of this.getNeighbors(simBoard, r, c)) {
+                if (simBoard[nr][nc] === opp) {
+                    const grp = this.getGroup(simBoard, nr, nc);
+                    if (this.countLiberties(simBoard, grp) === 0) {
+                        for (const [gr, gc] of grp) simBoard[gr][gc] = 0;
+                        if (grp.length === 1) newKo = [grp[0][0], grp[0][1]];
+                    }
+                }
+            }
+            ko = newKo;
+            color = opp;
         }
 
+        // 快速计分：只数子
+        let bs = 0, ws = 0;
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                if (simBoard[r][c] === 1) bs++;
+                else if (simBoard[r][c] === 2) ws++;
+            }
+        }
+        ws += 6.5;
+        return bs > ws ? 1 : (ws > bs ? 2 : 0);
+    }
+
+    // 评估候选落子
+    evaluateMoves(board, color, koPoint, numPlayouts) {
+        const candidates = this.getCandidateMoves(board, color, koPoint, 25);
+        if (candidates.length === 0) return [];
+
+        const n = numPlayouts || 10;
+        const results = [];
+        const opponent = color === 1 ? 2 : 1;
+        const maxSteps = Math.min(40, board.length * 2);
+
+        for (const [r, c] of candidates) {
+            // 应用落子
+            const simStart = board.map(row => [...row]);
+            simStart[r][c] = color;
+            let newKo = null;
+            for (const [nr, nc] of this.getNeighbors(simStart, r, c)) {
+                if (simStart[nr][nc] === opponent) {
+                    const grp = this.getGroup(simStart, nr, nc);
+                    if (this.countLiberties(simStart, grp) === 0) {
+                        for (const [gr, gc] of grp) simStart[gr][gc] = 0;
+                        if (grp.length === 1) newKo = [grp[0][0], grp[0][1]];
+                    }
+                }
+            }
+
+            let wins = 0;
+            for (let i = 0; i < n; i++) {
+                if (this.quickSim(simStart, opponent, newKo, maxSteps) === color) wins++;
+            }
+            results.push({ row: r, col: c, winRate: wins / n });
+        }
         results.sort((a, b) => b.winRate - a.winRate);
         return results;
     }
 
-    // 获取最佳落子
     getBestMove(board, color, koPoint, numPlayouts) {
-        const evaluated = this.evaluateMoves(board, color, koPoint, numPlayouts);
-        if (evaluated.length === 0) return null;
-        return [evaluated[0].row, evaluated[0].col, evaluated[0].winRate, evaluated];
+        const ev = this.evaluateMoves(board, color, koPoint, numPlayouts);
+        if (ev.length === 0) return null;
+        return [ev[0].row, ev[0].col, ev[0].winRate];
     }
 
-    // 估计当前胜率
     estimateWinRate(board, koPoint, numPlayouts) {
-        const n = numPlayouts || 50;
+        const n = numPlayouts || 8;
         let blackWins = 0;
         for (let i = 0; i < n; i++) {
-            const winner = this.simulateRandomGame(board, 1, koPoint);
-            if (winner === 1) blackWins++;
+            if (this.quickSim(board, 1, koPoint, 30) === 1) blackWins++;
         }
         return { blackRate: blackWins / n, whiteRate: 1 - blackWins / n };
     }
@@ -2531,7 +2496,6 @@ class GoAIGame {
         });
         this.board.canvas.addEventListener('click', (e) => this.handleClick(e));
 
-        this.updateWinRate();
         this.newGame();
     }
 
@@ -2555,7 +2519,7 @@ class GoAIGame {
         document.getElementById('goHintDisplay').style.display = 'none';
         document.getElementById('goAITurn').textContent = '⚫ AI 思考中...';
         this.updateScore();
-        this.updateWinRate();
+        this.scheduleWinRateUpdate();
         this.board.draw();
 
         // 如果 AI 执黑，自动下第一步
@@ -2602,7 +2566,7 @@ class GoAIGame {
         this.passes = 0;
         this.currentTurn = this.aiColor;
         this.updateScore();
-        this.updateWinRate();
+        this.scheduleWinRateUpdate();
         this.board.board = this.goBoardData;
         this.board.draw();
 
@@ -2617,49 +2581,45 @@ class GoAIGame {
     aiMove() {
         document.getElementById('goHintDisplay').style.display = 'none';
 
-        // 天元开局
+        // 首手天元
         if (this.moveHistory.length === 0 && this.goBoardData.every(r => r.every(c => c === 0))) {
             const center = Math.floor(this.size / 2);
-            this.makeAIMove(center, center, '首手天元');
+            this.makeAIMove(center, center);
             return;
         }
 
-        const playouts = this.size <= 9 ? 150 : (this.size <= 13 ? 100 : 50);
+        // 轻量 playouts：9×9=15, 13×13=10, 19×19=6
+        const playouts = this.size <= 9 ? 15 : (this.size <= 13 ? 10 : 6);
         const result = this.ai.getBestMove(this.goBoardData, this.aiColor, this.koPoint, playouts);
 
-        if (!result || result.length === 0) {
+        if (!result) {
             this.passes++;
-            if (this.passes >= 2) {
-                this.endGame();
-            } else {
+            if (this.passes >= 2) { this.endGame(); }
+            else {
                 this.currentTurn = this.playerColor;
                 document.getElementById('goAITurn').textContent = this.playerColor === 1 ? '⚫ 你的回合' : '⚪ 你的回合';
                 this.aiThinking = false;
                 this.koPoint = null;
-                this.updateWinRate();
+                this.scheduleWinRateUpdate();
             }
             return;
         }
 
-        const [row, col, winRate, allEvals] = result;
-        this.makeAIMove(row, col, `胜率预估: ${Math.round(winRate * 100)}%`);
+        const [row, col, winRate] = result;
+        this.makeAIMove(row, col);
     }
 
-    makeAIMove(row, col, info) {
-        // 检查打劫
+    makeAIMove(row, col) {
         if (this.koPoint && this.koPoint[0] === row && this.koPoint[1] === col) {
-            // 换一个第二选项
+            this.aiThinking = false;
+            return;
+        }
+        if (this.ai.isSuicide(this.goBoardData, row, col, this.aiColor)) {
             this.aiThinking = false;
             return;
         }
 
         this.goBoardData[row][col] = this.aiColor;
-        if (this.ai.isSuicide(this.goBoardData, row, col, this.aiColor)) {
-            this.goBoardData[row][col] = 0;
-            this.aiThinking = false;
-            return;
-        }
-
         const opponent = this.playerColor;
         let captured = false;
         for (const [nr, nc] of this.ai.getNeighbors(this.goBoardData, row, col)) {
@@ -2684,7 +2644,7 @@ class GoAIGame {
         this.aiThinking = false;
         this.board.board = this.goBoardData;
         this.updateScore();
-        this.updateWinRate();
+        this.scheduleWinRateUpdate();
         this.board.draw();
     }
 
@@ -2692,32 +2652,63 @@ class GoAIGame {
         if (this.aiThinking || this.gameOver) return;
         if (this.currentTurn !== this.playerColor) return;
 
-        const playouts = this.size <= 9 ? 200 : (this.size <= 13 ? 120 : 60);
-        const ai = new GoAI(this.board);
-        const evaluated = ai.evaluateMoves(this.goBoardData, this.playerColor, this.koPoint, playouts);
-
-        if (evaluated.length === 0) {
-            document.getElementById('goHintDisplay').textContent = '💡 暂无建议落子位置';
-            document.getElementById('goHintDisplay').style.display = 'block';
-            return;
-        }
-
-        const top = evaluated.slice(0, 3);
-        const letters = 'ABCDEFGHIJKLMNOPQRS';
-        const hints = top.map((m, i) => {
-            const letter = letters[m.col] || m.col;
-            const num = this.size - m.row;
-            return `${['🥇','🥈','🥉'][i]} ${letter}${num} (胜率 ${Math.round(m.winRate * 100)}%)`;
-        }).join('  ');
-
-        document.getElementById('goHintDisplay').textContent = `💡 ${hints}`;
+        document.getElementById('goHintDisplay').textContent = '💡 AI 正在分析...';
         document.getElementById('goHintDisplay').style.display = 'block';
 
-        // 高亮建议落子
-        this.board.highlights = top.map((m, i) =>
-            [m.row, m.col, ['rgba(39, 174, 96, 0.6)', 'rgba(52, 152, 219, 0.5)', 'rgba(155, 89, 182, 0.4)'][i]]
-        );
-        this.board.draw();
+        // 异步计算提示
+        setTimeout(() => {
+            const playouts = this.size <= 9 ? 12 : (this.size <= 13 ? 8 : 5);
+            const ai = new GoAI(this.board);
+            const evaluated = ai.evaluateMoves(this.goBoardData, this.playerColor, this.koPoint, playouts);
+
+            if (evaluated.length === 0) {
+                document.getElementById('goHintDisplay').textContent = '💡 暂无建议落子位置';
+                return;
+            }
+
+            const top = evaluated.slice(0, 3);
+            const letters = 'ABCDEFGHIJKLMNOPQRS';
+            const hints = top.map((m, i) => {
+                const letter = letters[m.col] || m.col;
+                const num = this.size - m.row;
+                return `${['🥇','🥈','🥉'][i]} ${letter}${num} (${Math.round(m.winRate * 100)}%)`;
+            }).join('  ');
+
+            document.getElementById('goHintDisplay').textContent = `💡 ${hints}`;
+            this.board.highlights = top.map((m, i) =>
+                [m.row, m.col, ['rgba(39,174,96,0.6)', 'rgba(52,152,219,0.5)', 'rgba(155,89,182,0.4)'][i]]
+            );
+            this.board.draw();
+        }, 50);
+    }
+
+    pass() {
+        if (this.aiThinking || this.gameOver) return;
+        if (this.currentTurn !== this.playerColor) return;
+        this.passes++;
+        if (this.passes >= 2) {
+            this.endGame();
+        } else {
+            this.currentTurn = this.aiColor;
+            this.koPoint = null;
+            document.getElementById('goAITurn').textContent = '🤖 AI 思考中...';
+            this.aiThinking = true;
+            setTimeout(() => this.aiMove(), 150);
+        }
+    }
+
+    scheduleWinRateUpdate() {
+        // 延迟更新胜率，不阻塞 UI
+        setTimeout(() => {
+            if (this.aiThinking || this.gameOver) return;
+            const ai = new GoAI(this.board);
+            const rate = ai.estimateWinRate(this.goBoardData, this.koPoint, this.size <= 9 ? 10 : 6);
+            const bp = Math.round(rate.blackRate * 100);
+            const wp = Math.round(rate.whiteRate * 100);
+            document.getElementById('wrBlack').textContent = bp + '%';
+            document.getElementById('wrWhite').textContent = wp + '%';
+            document.getElementById('wrBlackBar').style.width = bp + '%';
+        }, 200);
     }
 
     pass() {
@@ -2749,21 +2740,6 @@ class GoAIGame {
     updateScore() {
         document.getElementById('goAIScore').textContent =
             `黑 ${this.captures[1]} : ${this.captures[2]} 白`;
-    }
-
-    updateWinRate() {
-        if (this.aiThinking) return;
-        // 使用轻量模拟估计胜率
-        const ai = new GoAI(this.board);
-        const smallPlayouts = this.size <= 9 ? 60 : 30;
-        setTimeout(() => {
-            const rate = ai.estimateWinRate(this.goBoardData, this.koPoint, smallPlayouts);
-            const bp = Math.round(rate.blackRate * 100);
-            const wp = Math.round(rate.whiteRate * 100);
-            document.getElementById('wrBlack').textContent = bp + '%';
-            document.getElementById('wrWhite').textContent = wp + '%';
-            document.getElementById('wrBlackBar').style.width = bp + '%';
-        }, 0);
     }
 }
 
