@@ -2437,7 +2437,7 @@ class GoPractice {
         const [row, col] = pos;
         if (this.board.board[row][col] !== 0) return;
 
-        const puzzle = TSUMEKO_PROBLEMS[currentPuzzle];
+        const puzzle = TSUMEKO_PROBLEMS[this.currentPuzzle];
         const [ar, ac] = puzzle.answer;
 
         // 临时显示用户落子
